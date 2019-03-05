@@ -1520,7 +1520,9 @@ data_cor_vector <- function(data){
 cal_cell_distribution <- function(dropout_index, seed_value){
   
   methods = c("True Data", "Dropout Data", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")
+  
   # load the simulationd data
+  
   data_simulation = readRDS(file = paste0('simulation_data/simulation_data_drop_index_',
                                            dropout_index,
                                            '_seed_',
@@ -1536,58 +1538,163 @@ cal_cell_distribution <- function(dropout_index, seed_value){
   
   data_gene = data_cor[[2]]
   
-  k <- 1
+  k = 1
   
-  p <- list()
+  p = list()
   
-  ratio1 <- c()
+  ratio1 = c()
   
   for( j in group_info){
     
-    index1 <- data_simulation$group == j
+    index1 = data_simulation$group == j
     
-    ratio <- c()
+    ratio = c()
     
-    for(i in c(1:8)){
+    for(i in c(1:length(methods))){
       
-      tmp <- data_cell[[i]]
+      tmp = data_cell[[i]]
       
-      low_index <- lower.tri(tmp)*1
+      low_index = lower.tri(tmp)*1
       
-      tmp_index <- matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
       
-      tmp_index[index1,index1] <- 1
+      tmp_index[index1,index1] = 1
       
-      low_index1 <- low_index*tmp_index > 0 
+      low_index1 = low_index*tmp_index > 0 
       
-      tmp_index <- matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
       
-      tmp_index[index1,!index1] <- 1
+      tmp_index[index1,!index1] = 1
       
-      tmp_index[!index1,index1] <- 1
+      tmp_index[!index1,index1] = 1
       
-      low_index2 <- low_index*tmp_index > 0
+      low_index2 = low_index*tmp_index > 0
       
-      data_plot1 <- data.frame(x = data_cor_vector(tmp[low_index1]))
+      data_plot1 = data.frame(x = data_cor_vector(tmp[low_index1]))
       
-      data_plot1$y <- j
+      data_plot1$y = j
       
-      data_plot2 <- data.frame(x = data_cor_vector(tmp[low_index2]))
+      data_plot2 = data.frame(x = data_cor_vector(tmp[low_index2]))
       
-      data_plot2$y <- "Group0"
+      data_plot2$y = "Group0"
       
-      data_plot <- rbind(data_plot1,data_plot2)
+      data_plot = rbind(data_plot1,data_plot2)
       
-      a <- ks.test(data_plot1$x, data_plot2$x)
+      a = ks.test(data_plot1$x, data_plot2$x)
       
-      ratio <- cbind(ratio, a[[1]])
+      ratio = cbind(ratio, a[[1]])
       
     }
     
-    ratio1 <- rbind(ratio1,abs(ratio[2:8] - ratio[1]))
+    ratio1 = rbind(ratio1,abs(ratio[2:length(methods)] - ratio[1]))
   }
   
-  saveRDS(colMeans(ratio1),file = paste0("data_cell_distribution/data_",drop_index,"_",seed_value,".rds"))
+  saveRDS(colMeans(ratio1),file = paste0("data_cell_distribution/data_",dropout_index,"_",seed_value,".rds"))
   
 }
+
+cal_gene_distribution <- function(dropout_index, seed_value){
+  
+  methods = c("True Data", "Dropout Data", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")
+  
+  # load the simulationd data
+  data_simulation = readRDS(file = paste0('simulation_data/simulation_data_drop_index_',
+                                           dropout_index,
+                                           '_seed_',
+                                           seed_value,
+                                           '.rds')
+  )
+  
+  group_info = unique(data_simulation$group)
+  
+  data_cor = get_cor_data(drop_index, seed_value)
+  
+  data_cell = data_cor[[1]]
+  
+  data_gene = data_cor[[2]]
+  
+  tmp = as.numeric(as.numeric(gsub("Group", "", data_simulation$group)))
+  
+  de = get_marker_genes(data_simulation$data_true, tmp)
+  
+  group_unique = unique(tmp)
+  
+  N_groups = length(group_unique)
+  
+  de_gene = list()
+  
+  for(i in c(1:N_groups)){
+    
+    de_gene[[i]] = paste0("Gene",which((de$auroc > 0.85) & (de$clusts == group_unique[i]) & (de$pvalue < 0.01)))
+    
+  }
+  
+  names_gene = rownames(data_gene[[1]])
+  
+  k = 1
+  
+  p = list()
+  
+  ratio1 = c()
+  
+  for( j in c(1:N_groups)){
+    
+    if(length(de_gene[[j]]) > 2){
+      
+      index1 = names_gene %in% de_gene[[j]]
+      
+      ratio = c()
+      
+      for(i in c(1:length(methods))){
+        
+        tmp = data_gene[[i]]
+        
+        low_index = lower.tri(tmp)*1
+        
+        tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+        
+        tmp_index[index1,index1] = 1
+        
+        low_index1 = low_index*tmp_index > 0 
+        
+        tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+        
+        tmp_index[index1,!index1] = 1
+        
+        tmp_index[!index1,index1] = 1
+        
+        low_index2 = low_index*tmp_index > 0
+        
+        data_plot1 = data.frame(x = data_cor_vector(tmp[low_index1]))
+        
+        data_plot1$y = paste0("Marker_",j)
+        
+        data_plot2 = data.frame(x = data_cor_vector(tmp[low_index2]))
+        
+        data_plot2$y = "NonMarker"
+        
+        data_plot = rbind(data_plot1,data_plot2)
+        
+        a = ks.test(data_plot1$x, data_plot2$x)
+        
+        ratio = cbind(ratio, a[[1]])
+        
+      }
+      
+      ratio1 = rbind(ratio1,abs(ratio[2:length(methods)] - ratio[1]))
+      
+    }
+    
+  }
+  
+  # return(ratio1)  
+  saveRDS(colMeans(ratio1),file = paste0("data_gene_distribution/data_",drop_index,"_",seed_value,".rds"))
+  
+}
+
+
+
+
+
+
 
