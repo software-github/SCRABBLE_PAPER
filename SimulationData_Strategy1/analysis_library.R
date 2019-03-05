@@ -1087,160 +1087,507 @@ ggmaplot1 <- function (data, fdr = 0.05, fc = 1.5, genenames = NULL,
 }
 
 get_cor_data <- function(dropout_index, seed_value){
+  
   options( warn = -1 )
+  
   # load the simulationd data
-  data_simulation <- readRDS(file = paste0('simulation_data/simulation_data_drop_index_',
+  
+  data_simulation = readRDS(file = paste0('simulation_data/simulation_data_drop_index_',
                                            dropout_index_index,
                                            '_seed_',
                                            seed_value,
                                            '.rds')
   )
   
-  index <- rowMeans(data_simulation$data_dropout) > 0
+  index = rowMeans(data_simulation$data_dropout) > 0
   
-  data_true <- data_simulation$data_true
-  data_true <- data_true[index,]
-  # cell-cell correlation
-  data_true_cell <- cor(as.matrix((data_true)))
-  data_true_cell[is.na(data_true_cell)] <- 0
-  # gene-gene correlation
-  data_true_gene <- cor(t((data_true)), method = "pearson")
-  data_true_gene[is.na(data_true_gene)] <- 0
+  data_true = data_simulation$data_true
   
-  data_dropout <- data_simulation$data_dropout
-  data_dropout <- data_dropout[index,]
+  data_true = data_true[index,]
+  
   # cell-cell correlation
-  data_dropout_cell <- cor((data_dropout), method = "pearson")
-  data_dropout_cell[is.na(data_dropout_cell)] <- 0
+  
+  data_true_cell = cor(as.matrix((data_true)))
+  
+  data_true_cell[is.na(data_true_cell)] = 0
+  
   # gene-gene correlation
-  data_dropout_gene <- cor(t((data_dropout)), method = "pearson")
-  data_dropout_gene[is.na(data_dropout_gene)] <- 0
+  
+  data_true_gene = cor(t((data_true)), method = "pearson")
+  
+  data_true_gene[is.na(data_true_gene)] = 0
+  
+  data_dropout = data_simulation$data_dropout
+  
+  data_dropout = data_dropout[index,]
+  
+  # cell-cell correlation
+  
+  data_dropout_cell = cor((data_dropout), method = "pearson")
+  
+  data_dropout_cell[is.na(data_dropout_cell)] = 0
+  
+  # gene-gene correlation
+  
+  data_dropout_gene = cor(t((data_dropout)), method = "pearson")
+  
+  data_dropout_gene[is.na(data_dropout_gene)] = 0
   
   # load the magic results 
-  data <- read.csv(paste0("magic_data/magic_",dropout_index,"_",seed_value,".csv"),
+  
+  data = read.csv(paste0("imputation_magic_data/magic_",dropout_index,"_",seed_value,".csv"),
                    header = FALSE,
                    sep = "\t")
-  data$V1 <- NULL
-  data_magic <- as.matrix(data)
-  data_magic[data_magic < 0] <- 0
-  data_magic[is.nan(data_magic)] <- 0
-  data_magic <- data_magic[index,]
+  
+  data$V1 = NULL
+  
+  data_magic = as.matrix(data)
+  
+  data_magic[data_magic < 0] = 0
+  
+  data_magic[is.nan(data_magic)] = 0
+  
+  data_magic = data_magic[index,]
   
   # cell-cell correlation
-  data_magic_cell <- cor((data_magic), method = "pearson")
-  data_magic_cell[is.na(data_magic_cell)] <- 0
+  
+  data_magic_cell = cor((data_magic), method = "pearson")
+  
+  data_magic_cell[is.na(data_magic_cell)] = 0
+  
   # gene-gene correlation
-  data_magic_gene <- cor(t((data_magic)), method = "pearson")
-  data_magic_gene[is.na(data_magic_gene)] <- 0
+  
+  data_magic_gene = cor(t((data_magic)), method = "pearson")
+  
+  data_magic_gene[is.na(data_magic_gene)] = 0
   
   # load imputed data from scImpute
-  data_scimpute <- read.table( file = paste0("scImpute_data/scimpute_",
-                                             drop_index, "_",
+  
+  data_scimpute = read.table( file = paste0("imputation_scimpute_data/scimpute_",
+                                             dropout_index, "_",
                                              seed_value,
                                              ".csv") ,
                                header = FALSE, sep=","
   )
-  data_scimpute <- data_scimpute[index,]
+  
+  data_scimpute = data_scimpute[index,]
   
   # cell-cell correlation
-  data_scimpute_cell <- cor((data_scimpute), method = "pearson")
-  data_scimpute_cell[is.na(data_scimpute_cell)] <- 0
+  
+  data_scimpute_cell = cor((data_scimpute), method = "pearson")
+  
+  data_scimpute_cell[is.na(data_scimpute_cell)] = 0
+  
   # gene-gene correlation
-  data_scimpute_gene <- cor(t((data_scimpute)), method = "pearson")
-  data_scimpute_gene[is.na(data_scimpute_gene)] <- 0
+  
+  data_scimpute_gene = cor(t((data_scimpute)), method = "pearson")
+  
+  data_scimpute_gene[is.na(data_scimpute_gene)] = 0
   
   # load imputed data from Drimpute
-  data_drimpute <- read.table( file = paste0("DrImpute_data/drimpute_",
-                                             drop_index, "_",
+  
+  data_drimpute = read.table( file = paste0("imputation_drimpute_data/drimpute_",
+                                             dropout_index, "_",
                                              seed_value,
                                              ".csv") ,
                                header = FALSE, sep=","
   )
-  data_drimpute <- data_drimpute[index,]
+  
+  data_drimpute = data_drimpute[index,]
   
   # cell-cell correlation
-  data_drimpute_cell <- cor((data_drimpute), method = "pearson")
-  data_drimpute_cell[is.na(data_drimpute_cell)] <- 0
-  # gene-gene correlation
-  data_drimpute_gene <- cor(t((data_drimpute)), method = "pearson")
-  data_drimpute_gene[is.na(data_drimpute_gene)] <- 0
   
+  data_drimpute_cell = cor((data_drimpute), method = "pearson")
+  
+  data_drimpute_cell[is.na(data_drimpute_cell)] = 0
+  
+  # gene-gene correlation
+  
+  data_drimpute_gene = cor(t((data_drimpute)), method = "pearson")
+  
+  data_drimpute_gene[is.na(data_drimpute_gene)] = 0
+  
+
   # load imputed data from Saver
-  data_saver <- read.table( file = paste0("saver_data/saver_",
-                                          drop_index, "_",
+  data_viper = read.table( file = paste0("imputation_viper_data/viper_",
+                                          dropout_index, "_",
                                           seed_value,
                                           ".csv") ,
                             header = FALSE, sep=","
   )
-  data_saver <- data_saver[index,]
+  
+  data_viper = data_viper[index,]
   
   # cell-cell correlation
-  data_saver_cell <- cor((data_saver), method = "pearson")
-  data_saver_cell[is.na(data_saver_cell)] <- 0
+  
+  data_viper_cell = cor((data_viper), method = "pearson")
+  
+  data_viper_cell[is.na(data_viper_cell)] = 0
+  
   # gene-gene correlation
-  data_saver_gene <- cor(t((data_saver)), method = "pearson")
-  data_saver_gene[is.na(data_saver_gene)] <- 0
   
+  data_viper_gene = cor(t((data_viper)), method = "pearson")
   
-  # load imputed data from Saver
-  data_viper <- read.table( file = paste0("viper_data/viper_",
-                                          drop_index, "_",
-                                          seed_value,
-                                          ".csv") ,
-                            header = FALSE, sep=","
-  )
-  data_viper <- data_viper[index,]
-  
-  # cell-cell correlation
-  data_viper_cell <- cor((data_viper), method = "pearson")
-  data_viper_cell[is.na(data_viper_cell)] <- 0
-  # gene-gene correlation
-  data_viper_gene <- cor(t((data_viper)), method = "pearson")
-  data_viper_gene[is.na(data_viper_gene)] <- 0
+  data_viper_gene[is.na(data_viper_gene)] = 0
   
   # load imputed data from scrabble
-  data_scrabble <- read.table( file = paste0("Scrabble_data/scrabble_",
-                                             drop_index, "_",
+  
+  data_scrabble = read.table( file = paste0("imputation_scrabble_data/scrabble_",
+                                             dropout_index, "_",
                                              seed_value,
-                                             "_",k,
                                              ".csv") ,
                                header = FALSE, sep=","
   )
-  data_scrabble <- data_scrabble[index,]
+  
+  data_scrabble = data_scrabble[index,]
   
   
-  # cell-cell correlation
-  data_scrabble_cell <- cor(as.matrix(data_scrabble), method = "pearson")
-  data_scrabble_cell[is.na(data_scrabble_cell)] <- 0
+  # cell-cell correlatio
+  
+  data_scrabble_cell = cor(as.matrix(data_scrabble), method = "pearson")
+  
+  data_scrabble_cell[is.na(data_scrabble_cell)] = 0
+  
   # gene-gene correlation
-  data_scrabble_gene <- cor(t((data_scrabble)), method = "pearson")
-  data_scrabble_gene[is.na(data_scrabble_gene)] <- 0
   
-  data_cell <- list()
-  data_cell[[1]] <- data_true_cell
-  data_cell[[2]] <- data_dropout_cell
-  data_cell[[3]] <- data_drimpute_cell
-  data_cell[[4]] <- data_scimpute_cell
-  data_cell[[5]] <- data_magic_cell
-  data_cell[[6]] <- data_saver_cell
-  data_cell[[7]] <- data_viper_cell
-  data_cell[[8]] <- data_scrabble_cell
+  data_scrabble_gene = cor(t((data_scrabble)), method = "pearson")
   
-  data_gene <- list()
-  data_gene[[1]] <- data_true_gene
-  data_gene[[2]] <- data_dropout_gene
-  data_gene[[3]] <- data_drimpute_gene
-  data_gene[[4]] <- data_scimpute_gene
-  data_gene[[5]] <- data_magic_gene
-  data_gene[[6]] <- data_saver_gene
-  data_gene[[7]] <- data_viper_gene
-  data_gene[[8]] <- data_scrabble_gene
+  data_scrabble_gene[is.na(data_scrabble_gene)] = 0
   
-  data_cor <- list()
-  data_cor[[1]] <- data_cell
-  data_cor[[2]] <- data_gene
+  data_cell = list()
+  
+  data_cell[[1]] = data_true_cell
+  
+  data_cell[[2]] = data_dropout_cell
+  
+  data_cell[[3]] = data_drimpute_cell
+  
+  data_cell[[4]] = data_scimpute_cell
+  
+  data_cell[[5]] = data_magic_cell
+  
+  data_cell[[6]] = data_viper_cell
+  
+  data_cell[[7]] = data_scrabble_cell
+  
+  data_gene = list()
+  
+  data_gene[[1]] = data_true_gene
+  
+  data_gene[[2]] = data_dropout_gene
+  
+  data_gene[[3]] = data_drimpute_gene
+  
+  data_gene[[4]] = data_scimpute_gene
+  
+  data_gene[[5]] = data_magic_gene
+  
+  data_gene[[6]] = data_viper_gene
+  
+  data_gene[[7]] = data_scrabble_gene
+  
+  data_cor = list()
+  
+  data_cor[[1]] = data_cell
+  
+  data_cor[[2]] = data_gene
   
   return(data_cor)
+  
+}
+
+
+plot_cell_distribution <- function(dropout_index, seed_value){
+  
+  methods = c("True Data", "Dropout Data", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")
+  # load the simulationd data
+  data_simulation = readRDS(file = paste0('simulation_data/simulation_data_drop_index_',
+                                           dropout_index,
+                                           '_seed_',
+                                           seed_value,
+                                           '.rds')
+  )
+  
+  group_info = unique(data_simulation$group)
+  
+  data_cor = get_cor_data(dropout_index, seed_value)
+  
+  data_cell = data_cor[[1]]
+  
+  data_gene = data_cor[[2]]
+  
+  k = 1
+  
+  p = list()
+  
+  for( j in group_info){
+    
+    index1 = data_simulation$group == j
+    
+    ratio = c()
+    
+    for(i in c(1:length(methods))){
+      
+      tmp = data_cell[[i]]
+      
+      low_index = lower.tri(tmp)*1
+      
+      tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      
+      tmp_index[index1,index1] = 1
+      
+      low_index1 = low_index*tmp_index > 0 
+      
+      tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      
+      tmp_index[index1,!index1] = 1
+      
+      tmp_index[!index1,index1] = 1
+      
+      low_index2 = low_index*tmp_index > 0
+      
+      data_plot1 = data.frame(x = data_cor_vector(tmp[low_index1]))
+      
+      data_plot1$y = j
+      
+      data_plot2 = data.frame(x = data_cor_vector(tmp[low_index2]))
+      
+      data_plot2$y = "Group0"
+      
+      data_plot = rbind(data_plot1,data_plot2)
+      
+      a = ks.test(data_plot1$x, data_plot2$x)
+      
+      ratio = cbind(ratio, a[[1]])
+      
+      p[[k]] = ggplot(data_plot, aes(x=x, fill=y, color=y)) +
+        geom_density(alpha = .3) +
+        ggtitle(paste0("Cell: ", methods[i])) +
+        theme(legend.position = c(0.2, 0.9)) 
+      
+      k = k + 1
+      
+    }
+    
+    data_bar = data.frame(y = t(ratio), x = methods)
+    
+    colnames(data_bar) = c("y","x")
+    
+    p[[k]] = ggplot(data_bar, aes(x=x, y=y)) +
+      geom_bar(stat="identity", fill="steelblue") +
+      scale_x_discrete(limits=data_bar$x) +
+      xlab("Method") +
+      ylab("KS Statistics") +
+      ggtitle(paste0(j, "_", round(data_simulation$percentage_zeros))) +
+      theme_cowplot() +
+      theme(plot.title = element_text(size = 18, hjust = 0.4),
+            axis.text = element_text(size = 12),
+            legend.title=element_blank())
+    
+    k = k + 1
+    
+  }
+  
+  main = grid.arrange(grobs = p,ncol = (length(methods) + 1))
+  
+  return(main)
+  
+}
+
+
+plot_gene_distribution <- function(dropout_index, seed_value){
+  
+  methods = c("True Data", "Dropout Data", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")
+  # load the simulationd data
+  data_simulation = readRDS(file = paste0('simulation_data/simulation_data_drop_index_',
+                                           dropout_index,
+                                           '_seed_',
+                                           seed_value,
+                                           '.rds')
+  )
+  
+  group_info = unique(data_simulation$group)
+  
+  data_cor = get_cor_data(dropout_index, seed_value)
+  
+  data_cell = data_cor[[1]]
+  
+  data_gene = data_cor[[2]]
+  
+  tmp = as.numeric(as.numeric(gsub("Group", "", data_simulation$group)))
+  
+  de = get_marker_genes(data_simulation$data_true, tmp)
+  
+  group_unique = unique(tmp)
+  
+  N_groups = length(group_unique)
+  
+  de_gene = list()
+  
+  for(i in c(1:N_groups)){
+  
+    de_gene[[i]] = paste0("Gene",which((de$auroc > 0.85) & (de$clusts == group_unique[i]) & (de$pvalue < 0.01)))
+  
+  }
+  
+  names_gene = rownames(data_gene[[1]])
+  
+  k = 1
+  
+  p = list()
+  
+  for( j in c(1:N_groups)){
+    
+    index1 = names_gene %in% de_gene[[j]]
+    
+    ratio = c()
+    
+    for(i in c(1:length(methods))){
+      
+      tmp = data_gene[[i]]
+      
+      low_index = lower.tri(tmp)*1
+      
+      tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      
+      tmp_index[index1,index1] = 1
+      
+      low_index1 = low_index*tmp_index > 0 
+      
+      tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      
+      tmp_index[index1,!index1] = 1
+      
+      tmp_index[!index1,index1] = 1
+      
+      low_index2 = low_index*tmp_index > 0
+      
+      data_plot1 = data.frame(x = data_cor_vector(tmp[low_index1]))
+      
+      data_plot1$y = paste0("Marker_",j)
+      
+      data_plot2 = data.frame(x = data_cor_vector(tmp[low_index2]))
+      
+      data_plot2$y = "NonMarker"
+      
+      data_plot = rbind(data_plot1,data_plot2)
+      
+      a = ks.test(data_plot1$x, data_plot2$x)
+      
+      ratio = cbind(ratio, a[[1]])
+      
+      p[[k]] = ggplot(data_plot, aes(x=x, fill=y, color=y)) +
+        geom_density(alpha = .3) +
+        ggtitle(paste0("Gene: ", methods[i])) +
+        theme(legend.position = c(0.2, 0.9)) 
+      
+      k = k + 1
+      
+    }
+    
+    data_bar = data.frame(y = t(ratio), x = methods)
+    
+    colnames(data_bar) = c("y","x")
+    
+    p[[k]] = ggplot(data_bar, aes(x=x, y=y)) +
+      geom_bar(stat="identity", fill="steelblue") +
+      scale_x_discrete(limits=data_bar$x) +
+      xlab("Method") +
+      ylab("KS Statistics") +
+      ggtitle(paste0(j, "_", round(data_simulation$percentage_zeros))) +
+      theme_cowplot() +
+      theme(plot.title = element_text(size = 18, hjust = 0.4),
+            axis.text = element_text(size = 12),
+            legend.title=element_blank())
+    
+    k = k + 1
+    
+  }
+  
+  main = grid.arrange(grobs = p,ncol = 9)
+  
+  return(main)
+  
+}
+
+
+data_cor_vector <- function(data){
+  
+  return(data[lower.tri(data)])
+  
+}
+
+cal_cell_distribution <- function(dropout_index, seed_value){
+  
+  methods = c("True Data", "Dropout Data", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")
+  # load the simulationd data
+  data_simulation = readRDS(file = paste0('simulation_data/simulation_data_drop_index_',
+                                           dropout_index,
+                                           '_seed_',
+                                           seed_value,
+                                           '.rds')
+  )
+  
+  group_info = unique(data_simulation$group)
+  
+  data_cor = get_cor_data(dropout_index, seed_value)
+  
+  data_cell = data_cor[[1]]
+  
+  data_gene = data_cor[[2]]
+  
+  k <- 1
+  
+  p <- list()
+  
+  ratio1 <- c()
+  
+  for( j in group_info){
+    
+    index1 <- data_simulation$group == j
+    
+    ratio <- c()
+    
+    for(i in c(1:8)){
+      
+      tmp <- data_cell[[i]]
+      
+      low_index <- lower.tri(tmp)*1
+      
+      tmp_index <- matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      
+      tmp_index[index1,index1] <- 1
+      
+      low_index1 <- low_index*tmp_index > 0 
+      
+      tmp_index <- matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      
+      tmp_index[index1,!index1] <- 1
+      
+      tmp_index[!index1,index1] <- 1
+      
+      low_index2 <- low_index*tmp_index > 0
+      
+      data_plot1 <- data.frame(x = data_cor_vector(tmp[low_index1]))
+      
+      data_plot1$y <- j
+      
+      data_plot2 <- data.frame(x = data_cor_vector(tmp[low_index2]))
+      
+      data_plot2$y <- "Group0"
+      
+      data_plot <- rbind(data_plot1,data_plot2)
+      
+      a <- ks.test(data_plot1$x, data_plot2$x)
+      
+      ratio <- cbind(ratio, a[[1]])
+      
+    }
+    
+    ratio1 <- rbind(ratio1,abs(ratio[2:8] - ratio[1]))
+  }
+  
+  saveRDS(colMeans(ratio1),file = paste0("data_cell_distribution/data_",drop_index,"_",seed_value,".rds"))
   
 }
 
