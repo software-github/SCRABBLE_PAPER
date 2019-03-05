@@ -352,7 +352,7 @@ for(drop_index in c(1:3)){
     
   }
   
-  for(i in c(1:8)){
+  for(i in c(1:length(methods))){
     
     data_plot <- data.frame(x = data_cor_vector(data_gene[[i]]))
     
@@ -454,7 +454,7 @@ data_tmp <- list()
 
 k <- 1
 
-for(i in c(3,5,6)){
+for(i in c(1:3)){
   
   tmp1 <- c()
   
