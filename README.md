@@ -9,3 +9,9 @@ This folder includes all data and R scripts or python scripts of benchmarks.They
 - E14 (Figures 4C and 4D and Supplementary Figures related to Figure 4C or 4D)
 - ESC_human (Figure 6 and Supplementary Figures related to Figure 6)
 - MCA (Figure 7 and Supplementary Figures related to Figure 7)
+
+## Help
+Please feel free to contact Tao Peng (software.github@gmail.com) if you have any questions about the software.
+
+## Reference
+Tao Peng et al. Single-cell RNA-Seq imputation constrained by bulk RNA-Seq data. Submitted. 2018
