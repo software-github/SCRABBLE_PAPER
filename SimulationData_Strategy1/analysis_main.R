@@ -42,6 +42,8 @@ library(cluster)
 library(NbClust)
 library(fpc)
 library(class)
+library(VIPER)
+library(SC3)
 
 source("analysis_library.R")
 

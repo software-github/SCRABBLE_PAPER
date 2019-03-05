@@ -220,6 +220,43 @@ run_scimpute <- function(dropout_index, seed_value){
 # out_magic.to_csv(cwd+"/imputation_magic_data/magic_"+str(dropout_value)+"_"+str(seed_value)+".csv", sep = '\t', header= None)
 # -----------------------------------------------------------------------------
 
+
+######## VIPER ##############
+run_viper <- function(dropout_index, seed_value){
+  
+  # Parameter in the function
+  # dropout_index: the index of dropout_mid to control the dropout rate
+  # seed_value: the random seed
+  
+  # load the raw data
+  data <- readRDS(file = paste0('simulation_data/simulation_data_dropout_index_',
+                                dropout_index,
+                                '_seed_',
+                                seed_value,
+                                '.rds')
+  )
+  
+  # build the folder saving the imputed data using DrImpute
+  path <- "imputation_viper_data/"
+  
+  dir.create(file.path(path), showWarnings = FALSE)
+  
+  # impute the data using VIPER
+  data_dropout <- as.matrix(data$data_dropout)
+  
+  exdata <- VIPER(data_dropout, num = 5000, percentage.cutoff = 0.1, minbool = FALSE, alpha = 1, 
+                  report = FALSE, outdir = NULL, prefix = NULL)
+  
+  # write the data
+  write.table(exdata$imputed,
+              paste0(path, "viper_",dropout_index,"_",seed_value,".csv"),
+              sep=',',
+              row.names = F,
+              col.names = F
+  )
+  
+}
+
 ######## SCRABBLE ##############
 run_scrabble <- function(dropout_index, seed_value){
   
