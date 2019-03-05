@@ -292,7 +292,7 @@ for(drop_index in c(1:3)){
 # -------------------------------------------------------------------------
 
 
-# plot the distribution of cell-cell correlation figures in Figure 2 and the supplementary figures realted to Figure 2
+# plot the distribution of cell-cell correlation figures in Figure 5 and the supplementary figures realted to Figure 5
 # ----------------------------------------------------------------------------
 for(drop_index in c(1:3)){
   
@@ -308,7 +308,7 @@ for(drop_index in c(1:3)){
 # -------------------------------------------------------------------------
 
 
-# plot the distribution of gene-gene correlation figures in Figure 2 and the supplementary figures realted to Figure 2
+# plot the distribution of gene-gene correlation figures in Figure 5 and the supplementary figures realted to Figure 5
 # ----------------------------------------------------------------------------
 for(drop_index in c(1:3)){
   
@@ -323,7 +323,7 @@ for(drop_index in c(1:3)){
 }
 # -------------------------------------------------------------------------
 
-# plot the distribution of gene-gene correlation figures in Figure 2 and the supplementary figures realted to Figure 2
+# plot the distribution of gene-gene correlation figures in Figure 5 and the supplementary figures realted to Figure 5
 # ----------------------------------------------------------------------------
 
 methods <- c("True Data", "Dropout Data", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")
