@@ -401,8 +401,6 @@ for(i in c(1:3)){
   
   dataV0 <- t(data_tmp[[i]])
   
-  dataV0 <- dataV0[-c(5),]
-  
   dataV1 <- data.frame(as.vector(t(dataV0)))
   
   ylim_value <- 0.85
@@ -477,8 +475,6 @@ for(i in c(3,5,6)){
 for(i in c(1:3)){
   
   dataV0 <- t(data_tmp[[i]])
-  
-  dataV0 <- dataV0[-c(5),]
   
   dataV1 <- data.frame(as.vector(t(dataV0)))
   
