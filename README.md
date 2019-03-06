@@ -1,4 +1,7 @@
+
+
 [![DOI](https://zenodo.org/badge/173669168.svg)](https://zenodo.org/badge/latestdoi/173669168)
+
 
 # SCRABBLE_PAPER
 
