@@ -210,14 +210,14 @@ calculate_cluster <- function(cluster_index,
 }
 
 # plot the bun values
-plot_bun_value <- function(bun_value,annotation_info){
+plot_dun_value <- function(dun_value,annotation_info){
   
   # Parameter in the function
-  # bun_value: the bun values
+  # dun_value: the bun values
   # annotation_info: the cell annotation information
   
   # calculate the log2 values
-  index_tmp = -log2(bun_value)
+  index_tmp = -log2(dun_value)
   
   # prepare the data for the boxplot
   longData = melt(as.matrix(index_tmp))
@@ -303,7 +303,7 @@ pdf_dun_tsne <- function(tissue_name){
   
   cluster_n = unique(knn5)
   
-  bun_value = c()
+  dun_value = c()
   
   for(i in c(1:dim(annotation_info)[1])){
     
@@ -311,20 +311,20 @@ pdf_dun_tsne <- function(tissue_name){
       
       tmp_val = calculate_cluster(i,as.numeric(knn5),data_tsne)
       
-      bun_value = cbind(bun_value,tmp_val[[1]])
+      dun_value = cbind(dun_value,tmp_val[[1]])
       
     }else{
       
-      bun_value = cbind(bun_value,c(1,1,1,1,1,1))
+      dun_value = cbind(dun_value,c(1,1,1,1,1,1))
       
     }
     
   }
   
-  pp = plot_bun_value(bun_value,annotation_info)
+  pp = plot_dun_value(dun_value,annotation_info)
   
   ggsave(
-    filename = paste0(tissue_name, "_tsne_bun_index.pdf"),
+    filename = paste0(tissue_name, "_tsne_dun_index.pdf"),
     plot = pp,
     width = 8,
     height = 6
@@ -389,7 +389,7 @@ pdf_dun_tsne1 = function(tissue_name){
   
   cluster_n = unique(knn5)
   
-  bun_value = c()
+  dun_value = c()
   
   for(i in c(1:dim(annotation_info)[1])){
     
@@ -397,20 +397,20 @@ pdf_dun_tsne1 = function(tissue_name){
       
       tmp_val = calculate_cluster(i,as.numeric(knn5),data_tsne)
       
-      bun_value = cbind(bun_value,tmp_val[[1]])
+      dun_value = cbind(dun_value,tmp_val[[1]])
       
     }else{
       
-      bun_value = cbind(bun_value,c(1,1,1,1,1,1))
+      dun_value = cbind(dun_value,c(1,1,1,1,1,1))
       
     }
     
   }
   
-  pp = plot_bun_value(bun_value,annotation_info)
+  pp = plot_dun_value(dun_value,annotation_info)
   
   ggsave(
-    filename = paste0(tissue_name, "_tsne_bun_index.pdf"),
+    filename = paste0(tissue_name, "_tsne_dun_index.pdf"),
     plot = pp,
     width = 8,
     height = 6
