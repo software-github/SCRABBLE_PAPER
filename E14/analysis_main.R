@@ -186,6 +186,21 @@ write.table(tmp1, file = "imputation_drimpute_data/data_scimpute_imputation.csv"
 # 
 # out_magic.to_csv(cwd+"/magic_data/data_magic_imputation.csv", sep = ',', header= None)
 
+# ---------------------------------------------------------------------------------
+# Run DrImpute 
+# ---------------------------------------------------------------------------------
+
+dir.create(file.path("imputation_viper_data/"))
+
+data_sc <- fread("/data_all/data_sc.csv")
+
+extdata <- VIPER(log10(as.matrix(data_sc) + 1), num = 5000, percentage.cutoff = 0.01, minbool = FALSE, alpha = 1, 
+                 report = FALSE, outdir = NULL, prefix = NULL)
+
+extdata <- 10^extdata$imputed - 1
+
+saveRDS(extdata, file = "imputation_viper_data/data_viper_imputation.rds")
+
 
 # ---------------------------------------------------------------------------------
 # Run SCRABBLE
@@ -231,8 +246,9 @@ data_bulk <- read.table(file = paste0("data_all/data_bulk.csv"),
 
 data_sc_drimpute <- readRDS(file = "imputation_drimpute_data/data_drimpute_imputation.rds")
 
-data_scrabble <- readRDS(file = "imputation_scrabble_data/data_scrabble_imputation.rds")
+data_sc_viper <- readRDS(file = "imputation_viper_data/data_viper_imputation.rds")
 
+data_scrabble <- readRDS(file = "imputation_scrabble_data/data_scrabble_imputation.rds")
 
 data_sc_magic <- read.table(file = paste0("imputation_magic_data/data_magic_imputation.csv"), 
                             header = FALSE, sep = ",", stringsAsFactors = FALSE)
@@ -282,6 +298,7 @@ ks3 <- c()
 ks4 <- c()
 ks5 <- c()
 ks6 <- c()
+ks7 <- c()
 
 for (i in c(1:length(gene_FISH))){
   
@@ -326,14 +343,23 @@ for (i in c(1:length(gene_FISH))){
   
   tmp4$e <- "MAGIC"
   
-  # get the imputed data of scrabble
-  tmp <- data.frame((data_sc_scrabble[index,]))
+  # get the imputed data of viper
+  tmp <- data.frame((data_sc_viper[index,]))
   
   colnames(tmp) <- "value"
   
   tmp5 <- log10(tmp+1)
   
-  tmp5$e <- "SCRABBLE"
+  tmp5$e <- "VIPER"
+  
+  # get the imputed data of scrabble
+  tmp <- data.frame((data_sc_scrabble[index,]))
+  
+  colnames(tmp) <- "value"
+  
+  tmp6 <- log10(tmp+1)
+  
+  tmp6$e <- "SCRABBLE"
   
   # get the FISH data
   data_FISH <- read.table( file = paste0("data_mFISH/",gene1,".csv"), 
@@ -343,35 +369,40 @@ for (i in c(1:length(gene_FISH))){
   
   colnames(tmp) <- "value"
   
-  tmp6 <- tmp
+  tmp7 <- tmp
   
-  tmp6$e <- "smFISH"
+  tmp7$e <- "smFISH"
   
   # calculate the KS statistics
   # Raw vs smFISH
-  a <- ks.test(tmp1$value, tmp6$value)
+  a <- ks.test(tmp1$value, tmp7$value)
   
   ks1 <- rbind(ks1,a[[1]])
   
   # drimpute vs smFISh
-  a <- ks.test(tmp2$value, tmp6$value)
+  a <- ks.test(tmp2$value, tmp7$value)
   
   ks2 <- rbind(ks2,a[[1]])
   
   # scimpute vs smFISH
-  a <- ks.test(tmp3$value, tmp6$value)
+  a <- ks.test(tmp3$value, tmp7$value)
   
   ks3 <- rbind(ks3,a[[1]])
   
   # magic vs smFISH
-  a <- ks.test(tmp4$value, tmp6$value)
+  a <- ks.test(tmp4$value, tmp7$value)
   
   ks4 <- rbind(ks4,a[[1]])
   
-  # scrabble vs smFISH
-  a <- ks.test(tmp5$value, tmp6$value)
+  # viper vs smFISH
+  a <- ks.test(tmp5$value, tmp7$value)
   
   ks5 <- rbind(ks5,a[[1]])
+  
+  # scrabble vs smFISH
+  a <- ks.test(tmp6$value, tmp7$value)
+  
+  ks6 <- rbind(ks6,a[[1]])
   
 }
 
@@ -395,46 +426,55 @@ ks44 <- data.frame(ks = unlist(ks4))
 
 ks44$group <- 4
 
-# assemble KS statistics between scrabble and smFISH
+# assemble KS statistics between viper and smFISH
 ks55 <- data.frame(ks = unlist(ks5))
 
 ks55$group <- 5
+
+# assemble KS statistics between scrabble and smFISH
+ks66 <- data.frame(ks = unlist(ks5))
+
+ks66$group <- 6
 
 # combine all KS statistics
 ksData <- data.frame(rbind(as.matrix(ks11),
                            as.matrix(ks22),
                            as.matrix(ks33),
                            as.matrix(ks44),
-                           as.matrix(ks55)))
+                           as.matrix(ks55),
+                           as.matrix(ks66)))
 
 colnames(ksData) <- c("ks","group")
 
-# set up the comparison
-my_comparisons <- list( c("1", "5"),c("2", "5"), c("3", "5"), c("4", "5"))
+my_comparisons <- list( c("1", "6"),c("2", "6"), c("3", "6"), c("4", "6"), c("5", "6"))
 
-# calculate pvalues
 pval1 <- compare_means(ks ~ group,data = ksData, method = "t.test", paired = T)
 
-pval <- c(paste0('p1 = ',formatC(pval1$p[4], format = "e", digits = 2)),
-          paste0('p1 = ',formatC(pval1$p[7], format = "e", digits = 2)),
+pval <- c(paste0('p1 = ',formatC(pval1$p[5], format = "e", digits = 2)),
           paste0('p1 = ',formatC(pval1$p[9], format = "e", digits = 2)),
-          paste0('p1 = ',formatC(pval1$p[10], format = "e", digits = 2)))
+          paste0('p1 = ',formatC(pval1$p[12], format = "e", digits = 2)),
+          paste0('p1 = ',formatC(pval1$p[14], format = "e", digits = 2)),
+          paste0('p1 = ',formatC(pval1$p[15], format = "e", digits = 2)))
 
-# plot the boxplot
-pp <- ggboxplot(ksData, x = "group", y = "ks", fill = "group",
-                palette = c("#00AFBB","#0000CD", "#E7B800", "#FC4E07", "#6ebb00")) +
+pp <- ggboxplot(ksData, x = "group", y = "ks", fill = "group" ,
+                palette = c("#00AFBB","#0000CD", "#E7B800", "#FC4E07", "#ef8a62", "#6ebb00")) +
   stat_boxplot(geom = "errorbar", width = 0.3) +
-  ylim(c(0,1.5)) + 
+  ylim(c(0,1.6)) + 
   theme_bw() +
   geom_signif(comparisons = my_comparisons, 
               annotations = pval,
               tip_length = 0.03,
-              y_position = c(1.4,1.3, 1.2, 1.1)) +
-  theme(text=element_text(size=10),
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank())+
+              y_position = c(1.5,1.4,1.3, 1.2, 1.1)) +
+  theme(text=element_text(size=10),panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   xlab("Data Sets") + 
-  ylab("K-S Statistics")
+  ylab("K-S Statistics") +
+  scale_fill_manual( values = c("#00AFBB","#0000CD", "#E7B800", "#FC4E07", "#ef8a62", "#6ebb00"),
+                     name="Method",
+                     breaks=c("1", "2", "3", "4", "5", "6"),
+                     labels=c("Dropout", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")) +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank())
 
 # save the PDF file of the boxplot
 ggsave(filename=paste0("Figure_smFISH_boxplot.pdf"), 
@@ -456,6 +496,7 @@ for (i in c(1:length(gene2))){
                               data_drimpute, 
                               data_scimpute, 
                               data_magic, 
+                              data_viper,
                               data_scrabble, 
                               gene_name, 
                               gene1,

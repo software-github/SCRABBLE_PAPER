@@ -272,7 +272,7 @@ data_sc <- as.matrix(fread("/data_all/sc_data_ES.csv"))
 
 extdata <- DrImpute(data_sc)
 
-saveRDS(extdata, file = "imputation_drimpute_data/data_drimpute_imputation.rds")
+saveRDS(extdata, file = "imputation_data/data_drimpute_imputation.rds")
 
 # ---------------------------------------------------------------------------------
 # Run scImpute 
@@ -326,6 +326,18 @@ write.table(tmp1, file = "imputation_data/data_scimpute_imputation.csv",
 # 
 # out_magic.to_csv(cwd+"/magic_data/data_imputation.csv", sep = ',', header= None)
 
+# ---------------------------------------------------------------------------------
+# Run VIPER 
+# ---------------------------------------------------------------------------------
+dir.create(file.path("imputation_data/"), 
+           showWarnings = FALSE)
+
+data_sc <- as.matrix(fread("/data_all/sc_data_ES.csv"))
+
+extdata <- VIPER(as.matrix(data_sc), num = 5000, percentage.cutoff = 0.1, minbool = FALSE, alpha = 1, 
+                 report = FALSE, outdir = NULL, prefix = NULL)
+
+saveRDS(extdata$imputed, file = "imputation_data/data_viper_imputation.rds")
 
 # ---------------------------------------------------------------------------------
 # Run SCRABBLE
@@ -402,6 +414,11 @@ data_sc_magic <- data_sc_magic[,-1]
 
 data_sc_magic <- log10(data_sc_magic + 1)
 
+# load the imputed data of VIPER
+data_sc_viper <- readRDS(file = "imputation_data/data_viper_imputation.rds")
+
+data_sc_viper <- log10(data_sc_viper + 1)
+
 # load the imputed data of SCRABBLE
 data_sc_scrabble <- readRDS(file = "imputation_data/data_scrabble_imputation.rds")
 
@@ -418,6 +435,7 @@ data_de <- cbind(data_sc_SCRBseq,
                  data_sc_drimpute,
                  data_sc_scimpute,
                  data_sc_magic,
+                 data_sc_viper,
                  data_sc_scrabble)
 
 # define cell types
@@ -426,7 +444,8 @@ dataType <- c(rep(1,dim(data_sc_Dropseq)[2]),
               rep(3,dim(data_sc_Dropseq)[2]),
               rep(4,dim(data_sc_Dropseq)[2]),
               rep(5,dim(data_sc_Dropseq)[2]),
-              rep(6,dim(data_sc_Dropseq)[2]))
+              rep(6,dim(data_sc_Dropseq)[2]),
+              rep(7,dim(data_sc_Dropseq)[2]))
 
 # ---------------------------------------------------------------------------------
 # Plot the boxplot for the comparison
@@ -489,8 +508,15 @@ ggsave(
 
 
 
+# performance
+p <- performance_mean(gene_only_SCRB,gene_filter,22, data_sc_Dropseq, data_de)
 
-
+ggsave(
+  filename = paste0("performance_59_dropout_29_mean.pdf"),
+  plot = p,
+  width = 6,
+  height = 4
+)
 
 
 

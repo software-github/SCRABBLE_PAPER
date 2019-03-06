@@ -1,3 +1,4 @@
+######## Data Generation ##############
 # the function generating the simulation data using bioconductor package Splatter
 generate_simulation_splatter <- function(dropout_index, seed_value, nGenes = 800){
   
@@ -220,6 +221,43 @@ run_scimpute <- function(dropout_index, seed_value){
 # out_magic.to_csv(cwd+"/imputation_magic_data/magic_"+str(dropout_value)+"_"+str(seed_value)+".csv", sep = '\t', header= None)
 # -----------------------------------------------------------------------------
 
+
+######## VIPER ##############
+run_viper <- function(dropout_index, seed_value){
+  
+  # Parameter in the function
+  # dropout_index: the index of dropout_mid to control the dropout rate
+  # seed_value: the random seed
+  
+  # load the raw data
+  data <- readRDS(file = paste0('simulation_data/simulation_data_dropout_index_',
+                                dropout_index,
+                                '_seed_',
+                                seed_value,
+                                '.rds')
+  )
+  
+  # build the folder saving the imputed data using DrImpute
+  path <- "imputation_viper_data/"
+  
+  dir.create(file.path(path), showWarnings = FALSE)
+  
+  # impute the data using VIPER
+  data_dropout <- as.matrix(data$data_dropout)
+  
+  exdata <- VIPER(data_dropout, num = 5000, percentage.cutoff = 0.1, minbool = FALSE, alpha = 1, 
+                  report = FALSE, outdir = NULL, prefix = NULL)
+  
+  # write the data
+  write.table(exdata$imputed,
+              paste0(path, "viper_",dropout_index,"_",seed_value,".csv"),
+              sep=',',
+              row.names = F,
+              col.names = F
+  )
+  
+}
+
 ######## SCRABBLE ##############
 run_scrabble <- function(dropout_index, seed_value){
   
@@ -269,6 +307,8 @@ run_scrabble <- function(dropout_index, seed_value){
   
 }
 
+
+######## Data Analysis ##############
 # Calculate the similarity of two datasets
 calculate_similarity <- function(data1,data2){
   
@@ -373,6 +413,23 @@ run_error <- function(dropout_index, seed_value){
   # gene-gene correlation of the MAGIC imputed data
   data_magic_gene = cor(t((data_magic)), method = "pearson")
   
+  
+  # load imputed data from VIPER
+  data_viper = read.table( file = paste0("imputation_viper_data/viper_",
+                                            dropout_index, "_",
+                                            seed_value,
+                                            ".csv") ,
+                              header = FALSE, sep=","
+  )
+  
+  data_viper = data_viper[index,]
+  
+  # cell-cell correlation of the VIPER imputed data
+  data_viper_cell = cor((data_viper), method = "pearson")
+  
+  # gene-gene correlation of the VIPER imputed data
+  data_viper_gene = cor(t((data_viper)), method = "pearson")
+  
   # load imputed data from scrabble
   data_scrabble = read.table( file = paste0("imputation_scrabble_data/scrabble_",
                                             dropout_index, "_",
@@ -390,7 +447,9 @@ run_error <- function(dropout_index, seed_value){
   data_scrabble_gene = cor(t((data_scrabble)), method = "pearson")
   
   # calulate the error between the imputed data and true data
-  error = matrix(0, nrow = 6, ncol = 1)
+  
+  error = matrix(0, nrow = 7, ncol = 1)
+  
   error[1] = norm(log10(data_dropout + 1) - log10(data_true + 1), type = "2")
   
   error[2] = norm(log10(data_drimpute + 1) - log10(data_true + 1), type = "2")
@@ -399,13 +458,16 @@ run_error <- function(dropout_index, seed_value){
   
   error[4] = norm(log10(data_magic + 1) - log10(data_true + 1), type = "2")
   
-  error[5] = norm(log10(data_scrabble + 1) - log10(data_true + 1), type = "2")
+  error[5] = norm(log10(data_viper + 1) - log10(data_true + 1), type = "2")
   
-  error[6] = data_simulation$percentage_zeros
+  error[6] = norm(log10(data_scrabble + 1) - log10(data_true + 1), type = "2")
+  
+  error[7] = data_simulation$percentage_zeros
   
   # calulate the similarity between the cell-cell
   # correlation of the imputed data and the one of the true data
-  error_cell = matrix(0, nrow = 6, ncol = 1)
+  
+  error_cell = matrix(0, nrow = 7, ncol = 1)
   
   error_cell[1] = calculate_similarity(data_true_cell, data_dropout_cell)
   
@@ -415,14 +477,16 @@ run_error <- function(dropout_index, seed_value){
   
   error_cell[4] = calculate_similarity(data_true_cell, data_magic_cell)
   
-  error_cell[5] = calculate_similarity(data_true_cell, data_scrabble_cell)
+  error_cell[5] = calculate_similarity(data_true_cell, data_viper_cell)
   
-  error_cell[6] = data_simulation$percentage_zeros
+  error_cell[6] = calculate_similarity(data_true_cell, data_scrabble_cell)
+  
+  error_cell[7] = data_simulation$percentage_zeros
   
   
   # calulate the similarity between the gene-gene
   # correlation of the imputed data and the one of the true da
-  error_gene = matrix(0, nrow = 6, ncol = 1)
+  error_gene = matrix(0, nrow = 7, ncol = 1)
   
   error_gene[1] = calculate_similarity(data_true_gene, data_dropout_gene)
   
@@ -432,9 +496,11 @@ run_error <- function(dropout_index, seed_value){
   
   error_gene[4] = calculate_similarity(data_true_gene, data_magic_gene)
   
-  error_gene[5] = calculate_similarity(data_true_gene, data_scrabble_gene)
+  error_gene[5] = calculate_similarity(data_true_gene, data_viper_gene)
   
-  error_gene[6] = data_simulation$percentage_zeros
+  error_gene[6] = calculate_similarity(data_true_gene, data_scrabble_gene)
+  
+  error_gene[7] = data_simulation$percentage_zeros
   
   # gather the errors as a list
   result = list()
@@ -450,6 +516,7 @@ run_error <- function(dropout_index, seed_value){
 }
 
 # Define the plots for errors
+
 plot_comparison <- function(data, ylabels = "Error", ylim_value = 100, h_ylim = 10){
   
   # this function is used to plot the boxplot with the p-values
@@ -462,44 +529,45 @@ plot_comparison <- function(data, ylabels = "Error", ylim_value = 100, h_ylim = 
   # is the 10%*ylim_vlaue
   
   # extract the data with the first five columns
-  dataV0 = data[c(1:5),]
+  dataV0 = data[c(1:6),]
   
   dataV1 = data.frame(as.vector(t(dataV0)))
   
   # calculate the dropout rate
-  dropout_rate = round(mean(data[6,]))
+  dropout_rate = round(mean(data[7,]))
   
   # the number of data using for plotting the boxplot
   # dataV1 is built with two columns: y values and group labels
   N = dim(dataV1)[1]     
   
-  dataV1$group = rep(c(1:5), each = N/5)
+  dataV1$group = rep(c(1:6), each = N/6)
   
   colnames(dataV1) = c('y','group')
   
   # define the comparison lists
-  my_comparisons = list( c("1", "5"), c("2", "5"), c("3", "5"), c("4", "5"))
+  my_comparisons <- list( c("1", "6"), c("2", "6"), c("3", "6"), c("4", "6"), c("5", "6"))
   
   # compare the errors using t-test
-  pval = compare_means(y ~ group,data = dataV1, method = "t.test", ref.group = "5", paired = TRUE)
+  pval <- compare_means(y ~ group,data = dataV1, method = "t.test", ref.group = "6", paired = TRUE)
   
   # plot the boxplot with pvalues for the comparisons
-  pp = ggboxplot(dataV1, x = "group", y = "y", fill = "group",
-                 palette = c("#00AFBB","#0000CD", "#E7B800", "#FC4E07", "#6ebb00")) +
-    stat_boxplot(geom = "errorbar", width = 0.3, outlier.size = NA, outlier.shape = NA, outlier.colour = NA) +
-    ylim(c(0,ylim_value + 3.5*h_ylim)) + 
+  pp <- ggboxplot(dataV1, x = "group", y = "y", fill = "group",
+                  palette = c("#00AFBB","#0000CD", "#E7B800", "#FC4E07",  "#ef8a62", "#6ebb00")) +
+    stat_boxplot(geom = "errorbar", width = 0.3) +
+    ylim(c(0,ylim_value + 4.5*h_ylim)) + 
     theme_bw() +
     geom_signif(comparisons = my_comparisons, 
                 annotations = formatC(pval$p, format = "e", digits = 2),
                 tip_length = 0.01,
-                y_position = c(ylim_value + 3*h_ylim, ylim_value + 2*h_ylim, ylim_value + h_ylim, ylim_value)) +
+                y_position = c(ylim_value + 4*h_ylim, ylim_value + 3*h_ylim, ylim_value + 2*h_ylim, ylim_value + h_ylim, ylim_value)) +
     theme(text=element_text(size=14)) +
     xlab("Method") + 
     ylab(ylabels) + 
     ggtitle(paste0("Dropout Rate: ",dropout_rate,"%")) +
-    scale_fill_discrete(name="Method",
-                        breaks=c("1", "2", "3", "4", "5"),
-                        labels=c("Dropout", "DrImpute", "scImpute", "MAGIC", "SCRABBLE")) +
+    scale_fill_manual( values = c("#00AFBB","#0000CD", "#E7B800", "#FC4E07",  "#ef8a62", "#6ebb00"),
+                       name="Method",
+                       breaks=c("1", "2", "3", "4", "5", "6"),
+                       labels=c("Dropout", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")) +
     theme(panel.grid.major = element_blank(), 
           panel.grid.minor = element_blank(),
           panel.background = element_blank())
@@ -566,6 +634,16 @@ plot_meansd <- function(dropout_index, seed_value){
   
   data_magic = as.matrix(data)
   
+  # load imputed data from VIPER
+  data_viper = read.table( file = paste0("imputation_viper_data/viper_",
+                                            dropout_index, "_",
+                                            seed_value,
+                                            ".csv") ,
+                              header = FALSE, sep=","
+  )
+  
+  data_viper = as.matrix(data_viper)
+  
   # load imputed data from scrabble
   data_scrabble = read.table( file = paste0("imputation_scrabble_data/scrabble_",
                                             dropout_index, "_",
@@ -600,12 +678,16 @@ plot_meansd <- function(dropout_index, seed_value){
   
   pl[[5]] = p$gg + ggtitle("MAGIC")
   
+  p = meanSdPlot(log10(data_viper + 1), ranks = FALSE)
+  
+  pl[[6]] = p$gg + ggtitle("VIPER")
+  
   p = meanSdPlot(log10(data_scrabble + 1), ranks = FALSE)
   
-  pl[[6]] = p$gg + ggtitle("SCRABBLE")
+  pl[[7]] = p$gg + ggtitle("SCRABBLE")
   
   # combine the six plots as a whole one
-  main = grid.arrange(grobs = pl,ncol = 6)
+  main = grid.arrange(grobs = pl,ncol = 7)
   
   return(main)
   
@@ -662,6 +744,15 @@ plot_comparison_tsne <- function(dropout_index,
   data$V1 = NULL
   
   data_magic = as.matrix(data)
+  
+  # load imputed data from VIPER
+  data_viper = read.table( file = paste0("imputation_viper_data/viper_",
+                                         dropout_index, "_",
+                                         seed_value,
+                                         ".csv") ,
+                           header = FALSE, sep=","
+  )
+  
   
   # load imputed data from scrabble
   data_scrabble = read.table( file = paste0("imputation_scrabble_data/scrabble_",
@@ -720,6 +811,14 @@ plot_comparison_tsne <- function(dropout_index,
   
   pl[[5]] = plot_pca_singlecell(magic_tsne$Y,data_simulation$group)
   
+  set.seed(1)
+  
+  # calculate the tsne of viper imputed data
+  viper_tsne = Rtsne(t(as.matrix(data_viper)), 
+                        initial_dims = initial_dims_value, 
+                        perplexity = perplexity_value)
+  
+  pl[[6]] = plot_pca_singlecell(viper_tsne$Y,data_simulation$group)
   
   set.seed(1)
   
@@ -728,9 +827,9 @@ plot_comparison_tsne <- function(dropout_index,
                         initial_dims = initial_dims_value, 
                         perplexity = perplexity_value)
   
-  pl[[6]] = plot_pca_singlecell(scrabble_tsne$Y,data_simulation$group)
+  pl[[7]] = plot_pca_singlecell(scrabble_tsne$Y,data_simulation$group)
   
-  main = grid.arrange(grobs = pl,ncol = 6)
+  main = grid.arrange(grobs = pl,ncol = 7)
   
   return(main)
   
@@ -785,6 +884,14 @@ plot_ma <- function(dropout_index, seed_value){
   )
   
   
+  # load imputed data from VIPER
+  data_viper = read.table( file = paste0("imputation_viper_data/viper_",
+                                         dropout_index, "_",
+                                         seed_value,
+                                         ".csv") ,
+                           header = FALSE, sep=","
+  )
+  
   # load imputed data from scrabble
   data_scrabble = read.table( file = paste0("imputation_scrabble_data/scrabble_",
                                             dropout_index, "_",
@@ -810,8 +917,11 @@ plot_ma <- function(dropout_index, seed_value){
   # magic
   pl[[4]] = prepare_ma_data_plot(data_true, as.matrix(data_magic), "MAGIC") 
   
+  # viper
+  pl[[5]] = prepare_ma_data_plot(data_true, as.matrix(data_viper), "VIPER") 
+  
   # scrabble
-  pl[[5]] = prepare_ma_data_plot(data_true, as.matrix(data_scrabble), "SCRABBLE") 
+  pl[[6]] = prepare_ma_data_plot(data_true, as.matrix(data_scrabble), "SCRABBLE") 
   
   main = grid.arrange(grobs = pl,ncol = 6)
   
@@ -975,6 +1085,616 @@ ggmaplot1 <- function (data, fdr = 0.05, fc = 1.5, genenames = NULL,
   }
   res
 }
+
+get_cor_data <- function(dropout_index, seed_value){
+  
+  options( warn = -1 )
+  
+  # load the simulationd data
+  
+  data_simulation = readRDS(file = paste0('simulation_data/simulation_data_drop_index_',
+                                           dropout_index_index,
+                                           '_seed_',
+                                           seed_value,
+                                           '.rds')
+  )
+  
+  index = rowMeans(data_simulation$data_dropout) > 0
+  
+  data_true = data_simulation$data_true
+  
+  data_true = data_true[index,]
+  
+  # cell-cell correlation
+  
+  data_true_cell = cor(as.matrix((data_true)))
+  
+  data_true_cell[is.na(data_true_cell)] = 0
+  
+  # gene-gene correlation
+  
+  data_true_gene = cor(t((data_true)), method = "pearson")
+  
+  data_true_gene[is.na(data_true_gene)] = 0
+  
+  data_dropout = data_simulation$data_dropout
+  
+  data_dropout = data_dropout[index,]
+  
+  # cell-cell correlation
+  
+  data_dropout_cell = cor((data_dropout), method = "pearson")
+  
+  data_dropout_cell[is.na(data_dropout_cell)] = 0
+  
+  # gene-gene correlation
+  
+  data_dropout_gene = cor(t((data_dropout)), method = "pearson")
+  
+  data_dropout_gene[is.na(data_dropout_gene)] = 0
+  
+  # load the magic results 
+  
+  data = read.csv(paste0("imputation_magic_data/magic_",dropout_index,"_",seed_value,".csv"),
+                   header = FALSE,
+                   sep = "\t")
+  
+  data$V1 = NULL
+  
+  data_magic = as.matrix(data)
+  
+  data_magic[data_magic < 0] = 0
+  
+  data_magic[is.nan(data_magic)] = 0
+  
+  data_magic = data_magic[index,]
+  
+  # cell-cell correlation
+  
+  data_magic_cell = cor((data_magic), method = "pearson")
+  
+  data_magic_cell[is.na(data_magic_cell)] = 0
+  
+  # gene-gene correlation
+  
+  data_magic_gene = cor(t((data_magic)), method = "pearson")
+  
+  data_magic_gene[is.na(data_magic_gene)] = 0
+  
+  # load imputed data from scImpute
+  
+  data_scimpute = read.table( file = paste0("imputation_scimpute_data/scimpute_",
+                                             dropout_index, "_",
+                                             seed_value,
+                                             ".csv") ,
+                               header = FALSE, sep=","
+  )
+  
+  data_scimpute = data_scimpute[index,]
+  
+  # cell-cell correlation
+  
+  data_scimpute_cell = cor((data_scimpute), method = "pearson")
+  
+  data_scimpute_cell[is.na(data_scimpute_cell)] = 0
+  
+  # gene-gene correlation
+  
+  data_scimpute_gene = cor(t((data_scimpute)), method = "pearson")
+  
+  data_scimpute_gene[is.na(data_scimpute_gene)] = 0
+  
+  # load imputed data from Drimpute
+  
+  data_drimpute = read.table( file = paste0("imputation_drimpute_data/drimpute_",
+                                             dropout_index, "_",
+                                             seed_value,
+                                             ".csv") ,
+                               header = FALSE, sep=","
+  )
+  
+  data_drimpute = data_drimpute[index,]
+  
+  # cell-cell correlation
+  
+  data_drimpute_cell = cor((data_drimpute), method = "pearson")
+  
+  data_drimpute_cell[is.na(data_drimpute_cell)] = 0
+  
+  # gene-gene correlation
+  
+  data_drimpute_gene = cor(t((data_drimpute)), method = "pearson")
+  
+  data_drimpute_gene[is.na(data_drimpute_gene)] = 0
+  
+
+  # load imputed data from Saver
+  data_viper = read.table( file = paste0("imputation_viper_data/viper_",
+                                          dropout_index, "_",
+                                          seed_value,
+                                          ".csv") ,
+                            header = FALSE, sep=","
+  )
+  
+  data_viper = data_viper[index,]
+  
+  # cell-cell correlation
+  
+  data_viper_cell = cor((data_viper), method = "pearson")
+  
+  data_viper_cell[is.na(data_viper_cell)] = 0
+  
+  # gene-gene correlation
+  
+  data_viper_gene = cor(t((data_viper)), method = "pearson")
+  
+  data_viper_gene[is.na(data_viper_gene)] = 0
+  
+  # load imputed data from scrabble
+  
+  data_scrabble = read.table( file = paste0("imputation_scrabble_data/scrabble_",
+                                             dropout_index, "_",
+                                             seed_value,
+                                             ".csv") ,
+                               header = FALSE, sep=","
+  )
+  
+  data_scrabble = data_scrabble[index,]
+  
+  
+  # cell-cell correlatio
+  
+  data_scrabble_cell = cor(as.matrix(data_scrabble), method = "pearson")
+  
+  data_scrabble_cell[is.na(data_scrabble_cell)] = 0
+  
+  # gene-gene correlation
+  
+  data_scrabble_gene = cor(t((data_scrabble)), method = "pearson")
+  
+  data_scrabble_gene[is.na(data_scrabble_gene)] = 0
+  
+  data_cell = list()
+  
+  data_cell[[1]] = data_true_cell
+  
+  data_cell[[2]] = data_dropout_cell
+  
+  data_cell[[3]] = data_drimpute_cell
+  
+  data_cell[[4]] = data_scimpute_cell
+  
+  data_cell[[5]] = data_magic_cell
+  
+  data_cell[[6]] = data_viper_cell
+  
+  data_cell[[7]] = data_scrabble_cell
+  
+  data_gene = list()
+  
+  data_gene[[1]] = data_true_gene
+  
+  data_gene[[2]] = data_dropout_gene
+  
+  data_gene[[3]] = data_drimpute_gene
+  
+  data_gene[[4]] = data_scimpute_gene
+  
+  data_gene[[5]] = data_magic_gene
+  
+  data_gene[[6]] = data_viper_gene
+  
+  data_gene[[7]] = data_scrabble_gene
+  
+  data_cor = list()
+  
+  data_cor[[1]] = data_cell
+  
+  data_cor[[2]] = data_gene
+  
+  return(data_cor)
+  
+}
+
+
+plot_cell_distribution <- function(dropout_index, seed_value){
+  
+  methods = c("True Data", "Dropout Data", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")
+  # load the simulationd data
+  data_simulation = readRDS(file = paste0('simulation_data/simulation_data_drop_index_',
+                                           dropout_index,
+                                           '_seed_',
+                                           seed_value,
+                                           '.rds')
+  )
+  
+  group_info = unique(data_simulation$group)
+  
+  data_cor = get_cor_data(dropout_index, seed_value)
+  
+  data_cell = data_cor[[1]]
+  
+  data_gene = data_cor[[2]]
+  
+  k = 1
+  
+  p = list()
+  
+  for( j in group_info){
+    
+    index1 = data_simulation$group == j
+    
+    ratio = c()
+    
+    for(i in c(1:length(methods))){
+      
+      tmp = data_cell[[i]]
+      
+      low_index = lower.tri(tmp)*1
+      
+      tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      
+      tmp_index[index1,index1] = 1
+      
+      low_index1 = low_index*tmp_index > 0 
+      
+      tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      
+      tmp_index[index1,!index1] = 1
+      
+      tmp_index[!index1,index1] = 1
+      
+      low_index2 = low_index*tmp_index > 0
+      
+      data_plot1 = data.frame(x = data_cor_vector(tmp[low_index1]))
+      
+      data_plot1$y = j
+      
+      data_plot2 = data.frame(x = data_cor_vector(tmp[low_index2]))
+      
+      data_plot2$y = "Group0"
+      
+      data_plot = rbind(data_plot1,data_plot2)
+      
+      a = ks.test(data_plot1$x, data_plot2$x)
+      
+      ratio = cbind(ratio, a[[1]])
+      
+      p[[k]] = ggplot(data_plot, aes(x=x, fill=y, color=y)) +
+        geom_density(alpha = .3) +
+        ggtitle(paste0("Cell: ", methods[i])) +
+        theme(legend.position = c(0.2, 0.9)) 
+      
+      k = k + 1
+      
+    }
+    
+    data_bar = data.frame(y = t(ratio), x = methods)
+    
+    colnames(data_bar) = c("y","x")
+    
+    p[[k]] = ggplot(data_bar, aes(x=x, y=y)) +
+      geom_bar(stat="identity", fill="steelblue") +
+      scale_x_discrete(limits=data_bar$x) +
+      xlab("Method") +
+      ylab("KS Statistics") +
+      ggtitle(paste0(j, "_", round(data_simulation$percentage_zeros))) +
+      theme_cowplot() +
+      theme(plot.title = element_text(size = 18, hjust = 0.4),
+            axis.text = element_text(size = 12),
+            legend.title=element_blank())
+    
+    k = k + 1
+    
+  }
+  
+  main = grid.arrange(grobs = p,ncol = (length(methods) + 1))
+  
+  return(main)
+  
+}
+
+
+plot_gene_distribution <- function(dropout_index, seed_value){
+  
+  methods = c("True Data", "Dropout Data", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")
+  # load the simulationd data
+  data_simulation = readRDS(file = paste0('simulation_data/simulation_data_drop_index_',
+                                           dropout_index,
+                                           '_seed_',
+                                           seed_value,
+                                           '.rds')
+  )
+  
+  group_info = unique(data_simulation$group)
+  
+  data_cor = get_cor_data(dropout_index, seed_value)
+  
+  data_cell = data_cor[[1]]
+  
+  data_gene = data_cor[[2]]
+  
+  tmp = as.numeric(as.numeric(gsub("Group", "", data_simulation$group)))
+  
+  de = get_marker_genes(data_simulation$data_true, tmp)
+  
+  group_unique = unique(tmp)
+  
+  N_groups = length(group_unique)
+  
+  de_gene = list()
+  
+  for(i in c(1:N_groups)){
+  
+    de_gene[[i]] = paste0("Gene",which((de$auroc > 0.85) & (de$clusts == group_unique[i]) & (de$pvalue < 0.01)))
+  
+  }
+  
+  names_gene = rownames(data_gene[[1]])
+  
+  k = 1
+  
+  p = list()
+  
+  for( j in c(1:N_groups)){
+    
+    index1 = names_gene %in% de_gene[[j]]
+    
+    ratio = c()
+    
+    for(i in c(1:length(methods))){
+      
+      tmp = data_gene[[i]]
+      
+      low_index = lower.tri(tmp)*1
+      
+      tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      
+      tmp_index[index1,index1] = 1
+      
+      low_index1 = low_index*tmp_index > 0 
+      
+      tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      
+      tmp_index[index1,!index1] = 1
+      
+      tmp_index[!index1,index1] = 1
+      
+      low_index2 = low_index*tmp_index > 0
+      
+      data_plot1 = data.frame(x = data_cor_vector(tmp[low_index1]))
+      
+      data_plot1$y = paste0("Marker_",j)
+      
+      data_plot2 = data.frame(x = data_cor_vector(tmp[low_index2]))
+      
+      data_plot2$y = "NonMarker"
+      
+      data_plot = rbind(data_plot1,data_plot2)
+      
+      a = ks.test(data_plot1$x, data_plot2$x)
+      
+      ratio = cbind(ratio, a[[1]])
+      
+      p[[k]] = ggplot(data_plot, aes(x=x, fill=y, color=y)) +
+        geom_density(alpha = .3) +
+        ggtitle(paste0("Gene: ", methods[i])) +
+        theme(legend.position = c(0.2, 0.9)) 
+      
+      k = k + 1
+      
+    }
+    
+    data_bar = data.frame(y = t(ratio), x = methods)
+    
+    colnames(data_bar) = c("y","x")
+    
+    p[[k]] = ggplot(data_bar, aes(x=x, y=y)) +
+      geom_bar(stat="identity", fill="steelblue") +
+      scale_x_discrete(limits=data_bar$x) +
+      xlab("Method") +
+      ylab("KS Statistics") +
+      ggtitle(paste0(j, "_", round(data_simulation$percentage_zeros))) +
+      theme_cowplot() +
+      theme(plot.title = element_text(size = 18, hjust = 0.4),
+            axis.text = element_text(size = 12),
+            legend.title=element_blank())
+    
+    k = k + 1
+    
+  }
+  
+  main = grid.arrange(grobs = p,ncol = 9)
+  
+  return(main)
+  
+}
+
+
+data_cor_vector <- function(data){
+  
+  return(data[lower.tri(data)])
+  
+}
+
+cal_cell_distribution <- function(dropout_index, seed_value){
+  
+  methods = c("True Data", "Dropout Data", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")
+  
+  # load the simulationd data
+  
+  data_simulation = readRDS(file = paste0('simulation_data/simulation_data_drop_index_',
+                                           dropout_index,
+                                           '_seed_',
+                                           seed_value,
+                                           '.rds')
+  )
+  
+  group_info = unique(data_simulation$group)
+  
+  data_cor = get_cor_data(dropout_index, seed_value)
+  
+  data_cell = data_cor[[1]]
+  
+  data_gene = data_cor[[2]]
+  
+  k = 1
+  
+  p = list()
+  
+  ratio1 = c()
+  
+  for( j in group_info){
+    
+    index1 = data_simulation$group == j
+    
+    ratio = c()
+    
+    for(i in c(1:length(methods))){
+      
+      tmp = data_cell[[i]]
+      
+      low_index = lower.tri(tmp)*1
+      
+      tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      
+      tmp_index[index1,index1] = 1
+      
+      low_index1 = low_index*tmp_index > 0 
+      
+      tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      
+      tmp_index[index1,!index1] = 1
+      
+      tmp_index[!index1,index1] = 1
+      
+      low_index2 = low_index*tmp_index > 0
+      
+      data_plot1 = data.frame(x = data_cor_vector(tmp[low_index1]))
+      
+      data_plot1$y = j
+      
+      data_plot2 = data.frame(x = data_cor_vector(tmp[low_index2]))
+      
+      data_plot2$y = "Group0"
+      
+      data_plot = rbind(data_plot1,data_plot2)
+      
+      a = ks.test(data_plot1$x, data_plot2$x)
+      
+      ratio = cbind(ratio, a[[1]])
+      
+    }
+    
+    ratio1 = rbind(ratio1,abs(ratio[2:length(methods)] - ratio[1]))
+  }
+  
+  saveRDS(colMeans(ratio1),file = paste0("data_cell_distribution/data_",dropout_index,"_",seed_value,".rds"))
+  
+}
+
+cal_gene_distribution <- function(dropout_index, seed_value){
+  
+  methods = c("True Data", "Dropout Data", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")
+  
+  # load the simulationd data
+  data_simulation = readRDS(file = paste0('simulation_data/simulation_data_drop_index_',
+                                           dropout_index,
+                                           '_seed_',
+                                           seed_value,
+                                           '.rds')
+  )
+  
+  group_info = unique(data_simulation$group)
+  
+  data_cor = get_cor_data(drop_index, seed_value)
+  
+  data_cell = data_cor[[1]]
+  
+  data_gene = data_cor[[2]]
+  
+  tmp = as.numeric(as.numeric(gsub("Group", "", data_simulation$group)))
+  
+  de = get_marker_genes(data_simulation$data_true, tmp)
+  
+  group_unique = unique(tmp)
+  
+  N_groups = length(group_unique)
+  
+  de_gene = list()
+  
+  for(i in c(1:N_groups)){
+    
+    de_gene[[i]] = paste0("Gene",which((de$auroc > 0.85) & (de$clusts == group_unique[i]) & (de$pvalue < 0.01)))
+    
+  }
+  
+  names_gene = rownames(data_gene[[1]])
+  
+  k = 1
+  
+  p = list()
+  
+  ratio1 = c()
+  
+  for( j in c(1:N_groups)){
+    
+    if(length(de_gene[[j]]) > 2){
+      
+      index1 = names_gene %in% de_gene[[j]]
+      
+      ratio = c()
+      
+      for(i in c(1:length(methods))){
+        
+        tmp = data_gene[[i]]
+        
+        low_index = lower.tri(tmp)*1
+        
+        tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+        
+        tmp_index[index1,index1] = 1
+        
+        low_index1 = low_index*tmp_index > 0 
+        
+        tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+        
+        tmp_index[index1,!index1] = 1
+        
+        tmp_index[!index1,index1] = 1
+        
+        low_index2 = low_index*tmp_index > 0
+        
+        data_plot1 = data.frame(x = data_cor_vector(tmp[low_index1]))
+        
+        data_plot1$y = paste0("Marker_",j)
+        
+        data_plot2 = data.frame(x = data_cor_vector(tmp[low_index2]))
+        
+        data_plot2$y = "NonMarker"
+        
+        data_plot = rbind(data_plot1,data_plot2)
+        
+        a = ks.test(data_plot1$x, data_plot2$x)
+        
+        ratio = cbind(ratio, a[[1]])
+        
+      }
+      
+      ratio1 = rbind(ratio1,abs(ratio[2:length(methods)] - ratio[1]))
+      
+    }
+    
+  }
+  
+  # return(ratio1)  
+  saveRDS(colMeans(ratio1),file = paste0("data_gene_distribution/data_",drop_index,"_",seed_value,".rds"))
+  
+}
+
+
+
+
 
 
 

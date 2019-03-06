@@ -259,6 +259,43 @@ for(i in c(1:7)){
 # 
 #     X1.to_csv(cwd+"/imputation_magic_data/data_magic_"+celltype[i]+".csv", sep = ',', header= None)
 
+
+# ---------------------------------------------------------------------------------
+# Run VIPER
+# ---------------------------------------------------------------------------------
+
+dir.create(file.path("/imputation_viper_data/"))
+
+celltype <- c("H9", "DEC", "EC",  "HFF", "NPC", "TB", "H1")
+
+for(i in c(1:7)){
+  
+  data_sc <- as.matrix(fread(paste0(cwd,"/data_all/data_sc_",celltype[i],".csv")))
+  
+  data_bulk <- as.matrix(fread(paste0(cwd,"/data_all/data_bulk_",celltype[i],".csv")))
+  
+  load(file = paste0("data_all/IPA",
+                     "_",
+                     celltype[i],
+                     "_index.RData")
+  )
+  
+  data_sc1 <- data_sc
+  
+  data_sc <- data_sc[index_sc,]
+  
+  extdata <- VIPER(as.matrix(data_sc), num = 5000, percentage.cutoff = 0.1, minbool = FALSE, alpha = 1, 
+                   report = FALSE, outdir = NULL, prefix = NULL)
+  
+  extdata <- extdata$imputed
+  
+  data_sc1[index_sc,] <- extdata
+  
+  saveRDS(data_sc1, 
+          file = paste0("/imputation_viper_data/data_",celltype[i],"_viper_imputation.rds"))
+  
+}
+
 # ---------------------------------------------------------------------------------
 # Run SCRABBLE
 # ---------------------------------------------------------------------------------
@@ -320,13 +357,13 @@ celltype <- c("H9", "DEC", "EC",  "HFF", "NPC", "TB", "H1")
 
 pathways <- c("IPA", "KEGG", "REACTOME")
 
-method_name <- c("dropout","drimpute","scimpute","magic","scrabble")
+method_name <- c("dropout","drimpute","scimpute","magic","viper","scrabble")
 
 for(j in c(1:3)){
 
   for(i in c(1:7)){
     
-    for(k in c(1:5)){
+    for(k in c(1:6)){
       
       values <- calculate_ratio(celltype[i], pathways[j], method_name[k])
       
@@ -355,7 +392,7 @@ for(j in c(1:3)){
   
   for(i in c(1:7)){
 
-    for(k in c(1:5)){
+    for(k in c(1:6)){
       
       values <- readRDS(file = paste0(cwd,"/data_all/data_",
                                       celltype[i], "_",pathways[j],

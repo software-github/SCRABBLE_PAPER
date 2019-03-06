@@ -200,6 +200,10 @@ calculate_cluster <- function(cluster_index,
   stat_tmp = cluster.stats(dist(as.matrix(data_tsne[[5]]$Y)),cluster1)
   
   stats_cluster_dun[5] = stat_tmp$dunn
+  
+  stat_tmp = cluster.stats(dist(as.matrix(data_tsne[[6]]$Y)),cluster1)
+  
+  stats_cluster_dun[6] = stat_tmp$dunn
 
   return(stats_cluster)
   
@@ -222,13 +226,13 @@ plot_bun_value <- function(bun_value,annotation_info){
   colnames(longData) = c("X1","X2","value")
   
   # plot the boxplot
-  pp = ggplot(data=longData, aes(x=as.factor(X2), y= value, fill= as.factor(X1))) +
+  pp <- ggplot(data=longData, aes(x=as.factor(X2), y= value, fill= as.factor(X1))) +
     geom_bar(stat="identity", position=position_dodge()) + 
-    scale_color_manual(labels = c("Raw", "DrImpute","scImpute","MAGIC","SCRABBLE")) +
-    scale_fill_manual(values= c("#00AFBB","#0000CD","#E7B800", "#FC4E07", "#6ebb00"), 
+    scale_color_manual(labels = c("Dropout", "DrImpute", "scImpute", "MAGIC",  "VIPER", "SCRABBLE")) +
+    scale_fill_manual(values= c("#00AFBB","#0000CD", "#E7B800", "#FC4E07", "#ef8a62", "#6ebb00"), 
                       name="Data Type",
-                      breaks=c(1,2,3,4,5),
-                      labels=c("Raw Data","DrImpute","scImpute","MAGIC","SCRABBLE")) +
+                      breaks=c(1,2,3,4,5,6),
+                      labels=c("Dropout", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")) +
     theme_bw() +
     ylab("-log2(Dunn Index)") +
     scale_x_discrete(breaks= annotation_info[,2],labels=annotation_info[,1]) +
@@ -260,13 +264,13 @@ pdf_dun_tsne <- function(tissue_name){
   
   tmp[is.na(tmp)] = 0
   
-  knn5 = knn(data_tsne[[5]]$Y, data_tsne[[5]]$Y, tmp, k=5)
+  knn5 = knn(data_tsne[[6]]$Y, data_tsne[[6]]$Y, tmp, k=5)
   
   knn5 = as.numeric(knn5)
   
   method_name = c("Raw Data","DrImpute","scImpute","MAGIC","SCRABBLE")
   
-  for(i in c(1:5)){
+  for(i in c(1:6)){
     
     tmp = data_tsne[[i]]
     
@@ -311,7 +315,7 @@ pdf_dun_tsne <- function(tissue_name){
       
     }else{
       
-      bun_value = cbind(bun_value,c(1,1,1,1,1))
+      bun_value = cbind(bun_value,c(1,1,1,1,1,1))
       
     }
     
@@ -347,11 +351,11 @@ pdf_dun_tsne1 = function(tissue_name){
   
   tmp[is.na(tmp)] = 0
   
-  knn5 = knn(data_tsne[[5]]$Y, data_tsne[[5]]$Y, tmp, k=5)
+  knn5 = knn(data_tsne[[6]]$Y, data_tsne[[6]]$Y, tmp, k=5)
   
   method_name = c("Raw Data","DrImpute","scImpute","MAGIC","SCRABBLE")
   
-  for(i in c(1:5)){
+  for(i in c(1:6)){
     
     tmp = data_tsne[[i]]
     
@@ -397,7 +401,7 @@ pdf_dun_tsne1 = function(tissue_name){
       
     }else{
       
-      bun_value = cbind(bun_value,c(1,1,1,1,1))
+      bun_value = cbind(bun_value,c(1,1,1,1,1,1))
       
     }
     

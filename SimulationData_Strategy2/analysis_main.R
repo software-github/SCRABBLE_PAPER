@@ -122,6 +122,20 @@ for(dropout_index in c(1:4) ){
 }
 # ----------------------------------------------------------------------------
 
+# the following script is to run VIPER. Here we use 
+# HPC to generate the simulation which could reduce the running time
+# ----------------------------------------------------------------------------
+for(dropout_index in c(1:4) ){
+  
+  for(seed_value in c(1:100)){
+    
+    run_viper(dropout_index, rand_seed)
+    
+  }
+  
+}
+# ----------------------------------------------------------------------------
+
 # the following script is to run SCRABBLE. Here we use 
 # HPC to generate the simulation which could reduce the running time
 # ----------------------------------------------------------------------------
@@ -390,10 +404,237 @@ for(dropout_index in c(1:4)){
 # ----------------------------------------------------------------------------
 
 
+# ----------------------------------------------------------------------------
+for(lambda_index in c(1:4)){
+  
+  p <- plot_cell_distribution(lambda_index,2)
+  
+  ggsave(filename= paste0("Figure_HF_cell_",lambda_index,".pdf"), 
+         plot = main, 
+         width = 35, 
+         height = 32)
+  
+  p <- plot_gene_distribution(lambda_index,2)
+  
+  ggsave(filename= paste0("Figure_HF_gene_",lambda_index,".pdf"), 
+         plot = main, 
+         width = 35, 
+         height = 32)
+  
+}
+# ----------------------------------------------------------------------------
 
 
+# ----------------------------------------------------------------------------
+for(dropout_index in c(1:4) ){
+  
+  for(seed_value in c(1:100)){
+    
+    cal_gene_distribution(dropout_index, seed_value)
+    
+  }
+  
+}
+# ----------------------------------------------------------------------------
 
 
+# ----------------------------------------------------------------------------
+for(dropout_index in c(1:4) ){
+  
+  for(seed_value in c(1:100)){
+    
+    cal_cell_distribution(dropout_index, seed_value)
+    
+  }
+  
+}
+# ----------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------
+data_tmp <- list()
+k <- 1
+for(i in c(1:4)){
+  tmp1 <- c()
+  for(j in c(1:100)){
+    
+    tmp <- readRDS(file = paste0("data_cell_distribution/data_",i,"_",j,".rds"))
+    
+    tmp1 <- rbind(tmp1, tmp)
+    
+  }
+  
+  data_tmp[[k]] <- tmp1
+  
+  k <- k + 1
+  
+}
+
+for(i in c(1:4)){
+  
+  dataV0 <- t(data_tmp[[i]])
+  
+  dataV0 <- dataV0[-c(5),]
+  
+  dataV1 <- data.frame(as.vector(t(dataV0)))
+  
+  ylim_value <- 0.85
+  
+  h_ylim <- 0.1
+  # calculate the dropout rate
+  N <- dim(dataV1)[1]     
+  
+  dataV1$group <- as.factor(rep(c(1:6), each = N/6))
+  
+  colnames(dataV1) <- c('y','group')
+  
+  my_comparisons <- list( c("1", "6"), c("2", "6"), c("3", "6"), c("4", "6"), c("5", "6"))
+  
+  pval <- compare_means(y ~ group,data = dataV1, method = "t.test", ref.group = "6", paired = TRUE)
+  
+  pp <- ggboxplot(dataV1, x = "group", y = "y", fill = "group",
+                  palette = c("#00AFBB","#0000CD", "#E7B800", "#FC4E07",  "#ef8a62", "#6ebb00")) +
+    stat_boxplot(geom = "errorbar", width = 0.3) +
+    ylim(c(0,ylim_value + 4.5*h_ylim)) + 
+    theme_bw() +
+    geom_signif(comparisons = my_comparisons, 
+                annotations = formatC(pval$p, format = "e", digits = 2),
+                tip_length = 0.01,
+                y_position = c(ylim_value + 4*h_ylim, ylim_value + 3*h_ylim, ylim_value + 2*h_ylim, ylim_value + h_ylim, ylim_value)) +
+    theme(text=element_text(size=14)) +
+    xlab("Method") + 
+    ylab("Error") + 
+    ggtitle(paste0("Dropout Rate: ",i,"%")) +
+    scale_fill_manual( values = c("#00AFBB","#0000CD", "#E7B800", "#FC4E07",  "#ef8a62", "#6ebb00"),
+                       name="Method",
+                       breaks=c("1", "2", "3", "4", "5", "6"),
+                       labels=c("Dropout", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")) +
+    theme(panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank())
+  
+  ggsave(filename= paste0("Figure_HF_cell_boxplot_",i,".pdf"), 
+         plot = pp, 
+         width = 6, 
+         height = 4)
+  
+}
+# ----------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------
+data_tmp <- list()
+k <- 1
+for(i in c(1:4)){
+  tmp1 <- c()
+  for(j in c(1:100)){
+    
+    tmp <- readRDS(file = paste0("data_gene_distribution/data_",i,"_",j,".rds"))
+    
+    tmp1 <- rbind(tmp1, tmp)
+    
+  }
+  
+  data_tmp[[k]] <- tmp1
+  
+  k <- k + 1
+  
+}
+
+for(i in c(1:4)){
+  
+  dataV0 <- t(data_tmp[[i]])
+  
+  dataV0 <- dataV0[-c(5),]
+  
+  dataV1 <- data.frame(as.vector(t(dataV0)))
+  
+  ylim_value <- 0.85
+  
+  h_ylim <- 0.1
+  # calculate the dropout rate
+  N <- dim(dataV1)[1]     
+  
+  dataV1$group <- as.factor(rep(c(1:6), each = N/6))
+  
+  colnames(dataV1) <- c('y','group')
+  
+  my_comparisons <- list( c("1", "6"), c("2", "6"), c("3", "6"), c("4", "6"), c("5", "6"))
+  
+  pval <- compare_means(y ~ group,data = dataV1, method = "t.test", ref.group = "6", paired = TRUE)
+  
+  pp <- ggboxplot(dataV1, x = "group", y = "y", fill = "group",
+                  palette = c("#00AFBB","#0000CD", "#E7B800", "#FC4E07",  "#ef8a62", "#6ebb00")) +
+    stat_boxplot(geom = "errorbar", width = 0.3) +
+    ylim(c(0,ylim_value + 4.5*h_ylim)) + 
+    theme_bw() +
+    geom_signif(comparisons = my_comparisons, 
+                annotations = formatC(pval$p, format = "e", digits = 2),
+                tip_length = 0.01,
+                y_position = c(ylim_value + 4*h_ylim, ylim_value + 3*h_ylim, ylim_value + 2*h_ylim, ylim_value + h_ylim, ylim_value)) +
+    theme(text=element_text(size=14)) +
+    xlab("Method") + 
+    ylab("Error") + 
+    ggtitle(paste0("Dropout Rate: ",i,"%")) +
+    scale_fill_manual( values = c("#00AFBB","#0000CD", "#E7B800", "#FC4E07",  "#ef8a62", "#6ebb00"),
+                       name="Method",
+                       breaks=c("1", "2", "3", "4", "5", "6"),
+                       labels=c("Dropout", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")) +
+    theme(panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank())
+  
+  ggsave(filename= paste0("Figure_HF_gene_boxplot_",i,".pdf"), 
+         plot = pp, 
+         width = 6, 
+         height = 4)
+  
+}
+# ----------------------------------------------------------------------------
 
 
-
+# ----------------------------------------------------------------------------
+methods <- c("True Data", "Dropout Data", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")
+for(j in c(1:4)){
+  
+  data_cor <- get_cor_data(j, 2)
+  
+  data_cell <- data_cor[[1]]
+  
+  data_gene <- data_cor[[2]]
+  
+  p <- list()
+  
+  k <- 1
+  
+  for(i in c(1:8)){
+    
+    data_plot <- data.frame(x = data_cor_vector(data_cell[[i]]))
+    
+    p[[k]] <- ggplot(data_plot, aes(x=x)) + 
+              geom_histogram(color="darkblue", fill="lightblue") + 
+              ggtitle(paste0("Cell: ", methods[i]))
+    
+    k <- k + 1
+    
+  }
+  
+  
+  for(i in c(1:8)){
+    
+    data_plot <- data.frame(x = data_cor_vector(data_gene[[i]]))
+    
+    p[[k]] <- ggplot(data_plot, aes(x=x)) + 
+              geom_histogram(color="darkblue", fill="lightblue") + 
+              ggtitle(paste0("Gene: ", methods[i]))
+    
+    k <- k + 1
+    
+  }
+  
+  main <- grid.arrange(grobs = p,ncol = 8)
+  
+  ggsave(filename= paste0("Figure_HF_histogram_",j,".pdf"), 
+         plot = main, 
+         width = 35, 
+         height = 8)
+}
+# ----------------------------------------------------------------------------
