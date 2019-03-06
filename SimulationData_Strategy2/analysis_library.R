@@ -1213,10 +1213,281 @@ plot_cor_HF <- function(dropout_index, rand_seed){
   
 }
 
+data_cor_vector <- function(data){
+  
+  return(data[lower.tri(data)])
+  
+}
 
 
+get_cor_data <- function(drop_index, seed_value){
+  
+  options( warn = -1 )
+  
+  data = get_data_HF(drop_index, seed_value)
+  
+  data_true  = data$data_true
+  
+  data_dropout = data$data_raw
+  
+  data_drimpute = data$data_drimpute
+  
+  data_scimpute = data$data_scimpute
+  
+  data_magic = data$data_magic
+  
+  data_viper = data$data_viper
+  
+  data_scrabble = data$data_scrabble
+  
+  index = rowMeans(data_dropout) > 0
+  
+  data_true = data_true[index,]
+  
+  # cell-cell correlation
+  
+  data_true_cell = cor(as.matrix((data_true)))
+  
+  data_true_cell[is.na(data_true_cell)] = 0
+  
+  # gene-gene correlation
+  data_true_gene = cor(t((data_true)), method = "pearson")
+  
+  data_true_gene[is.na(data_true_gene)] = 0
+  
+  data_dropout = data_dropout[index,]
+  
+  # cell-cell correlation
+  data_dropout_cell = cor((data_dropout), method = "pearson")
+  
+  data_dropout_cell[is.na(data_dropout_cell)] = 0
+  
+  # gene-gene correlation
+  data_dropout_gene = cor(t((data_dropout)), method = "pearson")
+  
+  data_dropout_gene[is.na(data_dropout_gene)] = 0
+  
+  # load the magic results 
+  data_magic[data_magic < 0] = 0
+  
+  data_magic[is.nan(data_magic)] = 0
+  
+  data_magic = data_magic[index,]
+  
+  # cell-cell correlation
+  data_magic_cell = cor((data_magic), method = "pearson")
+  
+  data_magic_cell[is.na(data_magic_cell)] = 0
+  
+  # gene-gene correlation
+  data_magic_gene = cor(t((data_magic)), method = "pearson")
+  
+  data_magic_gene[is.na(data_magic_gene)] = 0
+  
+  # load imputed data from scImpute
+  data_scimpute = data_scimpute[index,]
+  
+  # cell-cell correlation
+  data_scimpute_cell = cor((data_scimpute), method = "pearson")
+  
+  data_scimpute_cell[is.na(data_scimpute_cell)] = 0
+  
+  # gene-gene correlation
+  data_scimpute_gene = cor(t((data_scimpute)), method = "pearson")
+  
+  data_scimpute_gene[is.na(data_scimpute_gene)] = 0
+  
+  # load imputed data from Drimpute
+  data_drimpute = data_drimpute[index,]
+  
+  # cell-cell correlation
+  data_drimpute_cell = cor((data_drimpute), method = "pearson")
+  
+  data_drimpute_cell[is.na(data_drimpute_cell)] = 0
+  
+  # gene-gene correlation
+  data_drimpute_gene = cor(t((data_drimpute)), method = "pearson")
+  
+  data_drimpute_gene[is.na(data_drimpute_gene)] = 0
+  
+  # load imputed data from Saver
+  data_viper = data_viper[index,]
+  
+  # cell-cell correlation
+  data_viper_cell = cor((data_viper), method = "pearson")
+  
+  data_viper_cell[is.na(data_viper_cell)] = 0
+  
+  # gene-gene correlation
+  data_viper_gene = cor(t((data_viper)), method = "pearson")
+  
+  data_viper_gene[is.na(data_viper_gene)] = 0
+  
+  # load imputed data from scrabble
+  data_scrabble = data_scrabble[index,]
+  
+  
+  # cell-cell correlation
+  data_scrabble_cell = cor(as.matrix(data_scrabble), method = "pearson")
+  
+  data_scrabble_cell[is.na(data_scrabble_cell)] = 0
+  
+  # gene-gene correlation
+  data_scrabble_gene = cor(t((data_scrabble)), method = "pearson")
+  
+  data_scrabble_gene[is.na(data_scrabble_gene)] = 0
+  
+  data_cell = list()
+  
+  data_cell[[1]] = data_true_cell
+  
+  data_cell[[2]] = data_dropout_cell
+  
+  data_cell[[3]] = data_drimpute_cell
+  
+  data_cell[[4]] = data_scimpute_cell
+  
+  data_cell[[5]] = data_magic_cell
+  
+  data_cell[[6]] = data_viper_cell
+  
+  data_cell[[7]] = data_scrabble_cell
+  
+  data_gene = list()
+  
+  data_gene[[1]] = data_true_gene
+  
+  data_gene[[2]] = data_dropout_gene
+  
+  data_gene[[3]] = data_drimpute_gene
+  
+  data_gene[[4]] = data_scimpute_gene
+  
+  data_gene[[5]] = data_magic_gene
+  
+  data_gene[[6]] = data_viper_gene
+  
+  data_gene[[7]] = data_scrabble_gene
+  
+  data_cor = list()
+  
+  data_cor[[1]] = data_cell
+  
+  data_cor[[2]] = data_gene
+  
+  return(data_cor)
+  
+}
 
+cal_gene_distribution <- function(drop_index, seed_value){
+  
 
+  methods <- c("True Data", "Dropout Data", "DrImpute", "scImpute", "MAGIC", "SAVER", "VIPER", "SCRABBLE")
+  
+  group_info <- c(1:8)
+  
+  group <- rep(1:8, each = 100)
+  
+  data_cor <- get_cor_data(drop_index, seed_value)
+  
+  data_cell <- data_cor[[1]]
+  
+  data_gene <- data_cor[[2]]
+  
+  data = get_data_HF(drop_index, seed_value, k = 4)
+  
+  data_true  = data$data_true
+  data_dropout = data$data_raw
+  
+  index <- rowMeans(data_dropout) > 0
+  
+  data_true <- data_true[index,]
+  
+  de <- get_marker_genes(data_true, group)
+  
+  tmp <- unique(de$clusts)
+  
+  tmp <- tmp[!is.na(tmp)]
+  
+  tmp <- sort(tmp)
+  
+  de_gene <- list()
+  
+  for(i in c(1:length(tmp))){
+    
+    de_gene[[i]] <- which((de$auroc > 0.85) & (de$clusts == tmp[i]) & (de$pvalue < 0.01))
+    print(paste0("The number of DE genes: ", length(de_gene[[i]])))
+    
+  }
+  
+  
+  N <- dim(data_gene[[1]])[1]
+  
+  k <- 1
+  
+  p <- list()
+  
+  ratio1 <- c()
+  
+  for( j in c(1:length(tmp))){
+    
+    if(length(de_gene[[j]]) > 2){
+      
+      index1 <- c(1:N) %in% de_gene[[j]]
+      
+      sum(index1)
+      
+      ratio <- c()
+      
+      for(i in c(1:8)){
+        
+        tmp <- data_gene[[i]]
+        
+        low_index <- lower.tri(tmp)*1
+        
+        tmp_index <- matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+        
+        tmp_index[index1,index1] <- 1
+        
+        low_index1 <- low_index*tmp_index > 0 
+        
+        tmp_index <- matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+        
+        tmp_index[index1,!index1] <- 1
+        
+        tmp_index[!index1,index1] <- 1
+        
+        low_index2 <- low_index*tmp_index > 0
+        
+        data_plot1 <- data.frame(x = data_cor_vector(tmp[low_index1]))
+        
+        data_plot1$y <- paste0("Marker_",j)
+        
+        data_plot2 <- data.frame(x = data_cor_vector(tmp[low_index2]))
+        
+        data_plot2$y <- "NonMarker"
+        
+        data_plot <- rbind(data_plot1,data_plot2)
+        
+        a <- ks.test(data_plot1$x, data_plot2$x)
+        
+        ratio <- cbind(ratio, a[[1]])
+        
+      }
+      
+      ratio1 <- rbind(ratio1,abs(ratio[2:8] - ratio[1]))
+      
+    }
+    
+    
+  }
+  
+  print(paste0("data_gene_distribution/data_",drop_index,"_",seed_value,".rds"))
+  
+  # return(ratio1)  
+  saveRDS(colMeans(ratio1),file = paste0("data_gene_distribution/data_",drop_index,"_",seed_value,".rds"))
+  
+}
 
 
 
