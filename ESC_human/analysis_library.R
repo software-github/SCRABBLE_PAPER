@@ -35,32 +35,31 @@ plot_pathway_ratio <- function(dataV3, dataType, pathway_name){
     hlim = 190
     
     # prepare the data as a vector for the boxplot
-    dataV1 = data.frame(y = (as.vector(as.matrix(dataV3))))
+    dataV1 <- data.frame(y = (as.vector(as.matrix(dataV3))))
+    dataV1$group <- rep(c(1:6),N)
     
-    dataV1$group = rep(c(1:5),N)
+    my_comparisons <- list( c("1", "6"), c("2", "6"), c("3", "6"), c("4", "6"), c("5", "6"))
+    pval <- compare_means(y ~ group,data = dataV1, method = "t.test", ref.group = "6")
     
-    # calculate the pvalues
-    my_comparisons = list( c("1", "5"), c("2", "5"), c("3", "5"), c("4", "5"))
-    
-    pval = compare_means(y ~ group,data = dataV1, method = "t.test", ref.group = "5")
-    
-    # plot the boxplots
-    pl = ggboxplot(dataV1, x = "group", y = "y", fill = "group",
-                    palette = c("#00AFBB","#0000CD", "#E7B800", "#FC4E07", "#6ebb00"),outlier.shape = NA) +
+    pl <- ggboxplot(dataV1, x = "group", y = "y", fill = "group",
+                    palette = c("#00AFBB","#0000CD", "#E7B800", "#FC4E07",  "#ef8a62", "#6ebb00")) +
       stat_boxplot(geom = "errorbar", width = 0.3) + 
-      ylim(c(-50,1.45*hlim)) + 
+      ylim(c(-50,1.55*hlim)) + 
       theme_bw() +
       ggtitle(paste0(dataType,"_",pathway_name)) +
       geom_signif(comparisons = my_comparisons, 
                   annotations = formatC(pval$p, format = "e", digits = 2),
                   tip_length = 0.03,
-                  y_position = c(1.4*hlim,1.3*hlim, 1.2*hlim, 1.1*hlim, hlim)) +
+                  y_position = c(1.5*hlim,1.4*hlim,1.3*hlim, 1.2*hlim, 1.1*hlim, hlim)) +
+      scale_fill_manual( values = c("#00AFBB","#0000CD", "#E7B800", "#FC4E07",  "#ef8a62", "#6ebb00"),
+                         name="Method",
+                         breaks=c("1", "2", "3", "4", "5", "6"),
+                         labels=c("Dropout", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")) +
       theme(text=element_text(size=12),legend.position="bottom",
             panel.grid.major = element_blank(),
             panel.grid.minor = element_blank())+
       xlab("Data Sets") + 
       ylab("Increasing Percentage")
-    
   }else{
     
     # define the number of data points
@@ -70,26 +69,26 @@ plot_pathway_ratio <- function(dataV3, dataType, pathway_name){
     hlim = 150
     
     # prepare the data as a vector for the boxplot
-    dataV1 = data.frame(y = (as.vector(as.matrix(dataV3))))
+    dataV1 <- data.frame(y = (as.vector(as.matrix(dataV3))))
+    dataV1$group <- rep(c(1:6),N)
     
-    # calculate the pvalues
-    dataV1$group = rep(c(1:5),N)
+    my_comparisons <- list( c("1", "6"), c("2", "6"), c("3", "6"), c("4", "6"), c("5", "6"))
+    pval <- compare_means(y ~ group,data = dataV1, method = "t.test", ref.group = "6")
     
-    my_comparisons = list( c("1", "5"), c("2", "5"), c("3", "5"), c("4", "5"))
-    
-    pval = compare_means(y ~ group,data = dataV1, method = "t.test", ref.group = "5")
-    
-    # plot the boxplots
-    pl = ggboxplot(dataV1, x = "group", y = "y", fill = "group",
-                    palette = c("#00AFBB","#0000CD", "#E7B800", "#FC4E07", "#6ebb00"),outlier.shape = NA) +
+    pl <- ggboxplot(dataV1, x = "group", y = "y", fill = "group",
+                    palette = c("#00AFBB","#0000CD", "#E7B800", "#FC4E07",  "#ef8a62", "#6ebb00")) +
       stat_boxplot(geom = "errorbar", width = 0.3) + 
-      ylim(c(-50,1.45*hlim)) + 
+      ylim(c(-50,1.55*hlim)) + 
       theme_bw() +
       ggtitle(paste0(dataType,"_",pathway_name)) +
       geom_signif(comparisons = my_comparisons, 
                   annotations = formatC(pval$p, format = "e", digits = 2),
                   tip_length = 0.03,
-                  y_position = c(1.4*hlim,1.3*hlim, 1.2*hlim, 1.1*hlim, hlim)) +
+                  y_position = c(1.5*hlim,1.4*hlim,1.3*hlim, 1.2*hlim, 1.1*hlim, hlim)) +
+      scale_fill_manual( values = c("#00AFBB","#0000CD", "#E7B800", "#FC4E07",  "#ef8a62", "#6ebb00"),
+                         name="Method",
+                         breaks=c("1", "2", "3", "4", "5", "6"),
+                         labels=c("Dropout", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")) +
       theme(text=element_text(size=12),legend.position="bottom",
             panel.grid.major = element_blank(),
             panel.grid.minor = element_blank())+
@@ -232,6 +231,16 @@ calculate_ratio <- function(data_set, pathway_name, method_name){
     data_sc = data_tmp[,-1] 
   }
   
+  if(method_name == "viper"){
+    
+    print(method_name)
+    
+    data_sc <- readRDS(file = paste0(cwd, "imputation_viper_data/data_",
+                                     data_set,
+                                     "_viper_imputation.rds"))
+    
+  }
+  
   if(method_name == "scrabble"){
     
     data_sc = readRDS(file = paste0("imputation_scrabble_data/data_",
@@ -270,7 +279,7 @@ calculate_ratio <- function(data_set, pathway_name, method_name){
     
     mean_value = c()
     
-    if (N_index > 10){
+    if (N_index > 50){
       
       for(j in c(1:101)){
         

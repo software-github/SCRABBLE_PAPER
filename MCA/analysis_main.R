@@ -651,6 +651,38 @@ for(i in c(1:8)){
 
 
 # ---------------------------------------------------------------------------------
+# Run VIPER
+# ---------------------------------------------------------------------------------
+
+# common tissue
+common_tissue <- c("FetalBrain", "SmallIntestine", "Kidney", "Liver", 
+                   "Spleen", "Placenta", "FetalLiver", "Lung")
+
+# do the imputation and save the data in the folder "/imputation_data"
+for(i in c(1:8)){
+  
+  tissue_name <- common_tissue[i]
+  
+  data <- readRDS(paste0("/data_sc_bulk/",tissue_name,"_imputation.rds"))
+  
+  extdata <- VIPER(as.matrix(data[[4]]), num = 9000, percentage.cutoff = 0.1, minbool = FALSE, alpha = 1, 
+                   report = FALSE, outdir = NULL, prefix = NULL) 
+  
+  index <- match(data[[3]], rownames(data[[4]]))
+  
+  data_viper_tmp <- extdata$imputed
+  
+  data_viper <- data_viper_tmp[index,]
+  
+  saveRDS(extdata, file = paste0("/imputation_data/",
+                                 tissue_name,
+                                 "_viper_imputation.rds"))
+  
+}
+
+
+
+# ---------------------------------------------------------------------------------
 # Run SCRABBLE
 # ---------------------------------------------------------------------------------
 
@@ -766,7 +798,14 @@ for(i in c(1:8)){
   
   set.seed(42)
   
-  data_tsne[[5]] <- Rtsne(t(as.matrix(data_scrabble)), 
+  data_tsne[[5]] <- Rtsne(t(as.matrix(data_viper)), 
+                          initial_dims = initial_dims_value, 
+                          perplexity = perplexity_value)
+  
+  
+  set.seed(42)
+  
+  data_tsne[[6]] <- Rtsne(t(as.matrix(data_scrabble)), 
                           initial_dims = initial_dims_value, 
                           perplexity = perplexity_value)
   
