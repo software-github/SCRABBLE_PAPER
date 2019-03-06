@@ -1382,107 +1382,105 @@ get_cor_data <- function(drop_index, seed_value){
 cal_gene_distribution <- function(drop_index, seed_value){
   
 
-  methods <- c("True Data", "Dropout Data", "DrImpute", "scImpute", "MAGIC", "SAVER", "VIPER", "SCRABBLE")
+  methods = c("True Data", "Dropout Data", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")
   
-  group_info <- c(1:8)
+  group_info = c(1:8)
   
-  group <- rep(1:8, each = 100)
+  group = rep(1:8, each = 100)
   
-  data_cor <- get_cor_data(drop_index, seed_value)
+  data_cor = get_cor_data(drop_index, seed_value)
   
-  data_cell <- data_cor[[1]]
+  data_cell = data_cor[[1]]
   
-  data_gene <- data_cor[[2]]
+  data_gene = data_cor[[2]]
   
-  data = get_data_HF(drop_index, seed_value, k = 4)
+  data = get_data_HF(drop_index, seed_value)
   
   data_true  = data$data_true
+  
   data_dropout = data$data_raw
   
-  index <- rowMeans(data_dropout) > 0
+  index = rowMeans(data_dropout) > 0
   
-  data_true <- data_true[index,]
+  data_true = data_true[index,]
   
-  de <- get_marker_genes(data_true, group)
+  de = get_marker_genes(data_true, group)
   
-  tmp <- unique(de$clusts)
+  tmp = unique(de$clusts)
   
-  tmp <- tmp[!is.na(tmp)]
+  tmp = tmp[!is.na(tmp)]
   
-  tmp <- sort(tmp)
+  tmp = sort(tmp)
   
-  de_gene <- list()
+  de_gene = list()
   
   for(i in c(1:length(tmp))){
     
-    de_gene[[i]] <- which((de$auroc > 0.85) & (de$clusts == tmp[i]) & (de$pvalue < 0.01))
+    de_gene[[i]] = which((de$auroc > 0.85) & (de$clusts == tmp[i]) & (de$pvalue < 0.01))
+    
     print(paste0("The number of DE genes: ", length(de_gene[[i]])))
     
   }
   
   
-  N <- dim(data_gene[[1]])[1]
+  N = dim(data_gene[[1]])[1]
   
-  k <- 1
+  k = 1
   
-  p <- list()
+  p = list()
   
-  ratio1 <- c()
+  ratio1 = c()
   
   for( j in c(1:length(tmp))){
     
     if(length(de_gene[[j]]) > 2){
       
-      index1 <- c(1:N) %in% de_gene[[j]]
+      index1 = c(1:N) %in% de_gene[[j]]
       
-      sum(index1)
+      ratio = c()
       
-      ratio <- c()
-      
-      for(i in c(1:8)){
+      for(i in c(1:7)){
         
-        tmp <- data_gene[[i]]
+        tmp = data_gene[[i]]
         
-        low_index <- lower.tri(tmp)*1
+        low_index = lower.tri(tmp)*1
         
-        tmp_index <- matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+        tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
         
-        tmp_index[index1,index1] <- 1
+        tmp_index[index1,index1] = 1
         
-        low_index1 <- low_index*tmp_index > 0 
+        low_index1 = low_index*tmp_index > 0 
         
-        tmp_index <- matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+        tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
         
-        tmp_index[index1,!index1] <- 1
+        tmp_index[index1,!index1] = 1
         
-        tmp_index[!index1,index1] <- 1
+        tmp_index[!index1,index1] = 1
         
-        low_index2 <- low_index*tmp_index > 0
+        low_index2 = low_index*tmp_index > 0
         
-        data_plot1 <- data.frame(x = data_cor_vector(tmp[low_index1]))
+        data_plot1 = data.frame(x = data_cor_vector(tmp[low_index1]))
         
-        data_plot1$y <- paste0("Marker_",j)
+        data_plot1$y = paste0("Marker_",j)
         
-        data_plot2 <- data.frame(x = data_cor_vector(tmp[low_index2]))
+        data_plot2 = data.frame(x = data_cor_vector(tmp[low_index2]))
         
-        data_plot2$y <- "NonMarker"
+        data_plot2$y = "NonMarker"
         
-        data_plot <- rbind(data_plot1,data_plot2)
+        data_plot = rbind(data_plot1,data_plot2)
         
-        a <- ks.test(data_plot1$x, data_plot2$x)
+        a = ks.test(data_plot1$x, data_plot2$x)
         
-        ratio <- cbind(ratio, a[[1]])
+        ratio = cbind(ratio, a[[1]])
         
       }
       
-      ratio1 <- rbind(ratio1,abs(ratio[2:8] - ratio[1]))
+      ratio1 = rbind(ratio1,abs(ratio[2:8] - ratio[1]))
       
     }
     
     
   }
-  
-  print(paste0("data_gene_distribution/data_",drop_index,"_",seed_value,".rds"))
   
   # return(ratio1)  
   saveRDS(colMeans(ratio1),file = paste0("data_gene_distribution/data_",drop_index,"_",seed_value,".rds"))
@@ -1490,10 +1488,291 @@ cal_gene_distribution <- function(drop_index, seed_value){
 }
 
 
+cal_cell_distribution <- function(drop_index, seed_value){
+  
+  methods = c("True Data", "Dropout Data", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")
+  
+  group_info = c(1:8)
+  
+  group = rep(1:8, each = 100)
+  
+  data_cor = get_cor_data(drop_index, seed_value)
+  
+  data_cell = data_cor[[1]]
+  
+  data_gene = data_cor[[2]]
+  
+  k = 1
+  
+  p = list()
+  
+  ratio1 = c()
+  
+  for( j in c(1:8)){
+    
+    index1 = group == j
+    
+    ratio = c()
+    
+    for(i in c(1:7)){
+      
+      tmp = data_cell[[i]]
+      
+      low_index = lower.tri(tmp)*1
+      
+      tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      
+      tmp_index[index1,index1] = 1
+      
+      low_index1 = low_index*tmp_index > 0 
+      
+      tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      
+      tmp_index[index1,!index1] = 1
+      
+      tmp_index[!index1,index1] = 1
+      
+      low_index2 = low_index*tmp_index > 0
+      
+      data_plot1 = data.frame(x = data_cor_vector(tmp[low_index1]))
+      
+      data_plot1$y = j
+      
+      data_plot2 = data.frame(x = data_cor_vector(tmp[low_index2]))
+      
+      data_plot2$y = "Group0"
+      
+      data_plot = rbind(data_plot1,data_plot2)
+      
+      a = ks.test(data_plot1$x, data_plot2$x)
+      
+      ratio = cbind(ratio, a[[1]])
+      
+    }
+    
+    ratio1 = rbind(ratio1,abs(ratio[2:8] - ratio[1]))
+  }
+  
+  saveRDS(colMeans(ratio1),file = paste0("data_cell_distribution/data_",drop_index,"_",seed_value,".rds"))
+  
+}
 
 
+plot_cell_distribution <- function(drop_index, seed_value){
+  
+  methods = c("True Data", "Dropout Data", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")
+  
+  group_info = c(1:8)
+  
+  group = rep(1:8, each = 100)
+  
+  data_cor = get_cor_data(drop_index, seed_value)
+  
+  data_cell = data_cor[[1]]
+  
+  data_gene = data_cor[[2]]
+  
+  k = 1
+  
+  p = list()
+  
+  for( j in group_info){
+    
+    index1 = group == j
+    
+    ratio = c()
+    
+    for(i in c(1:7)){
+      
+      tmp = data_cell[[i]]
+      
+      low_index = lower.tri(tmp)*1
+      
+      tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      
+      tmp_index[index1,index1] = 1
+      
+      low_index1 = low_index*tmp_index > 0 
+      
+      tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      
+      tmp_index[index1,!index1] = 1
+      
+      tmp_index[!index1,index1] = 1
+      
+      low_index2 = low_index*tmp_index > 0
+      
+      data_plot1 = data.frame(x = data_cor_vector(tmp[low_index1]))
+      
+      data_plot1$y = j
+      
+      data_plot2 = data.frame(x = data_cor_vector(tmp[low_index2]))
+      
+      data_plot2$y = "Group0"
+      
+      data_plot = rbind(data_plot1,data_plot2)
+      
+      a = ks.test(data_plot1$x, data_plot2$x)
+      
+      ratio = cbind(ratio, a[[1]])
+      
+      p[[k]] = ggplot(data_plot, aes(x=x, fill=y, color=y)) +
+        geom_density(alpha = .3) +
+        ggtitle(paste0("Cell: ", methods[i])) +
+        theme(legend.position = c(0.2, 0.9)) 
+      
+      k = k + 1
+      
+    }
+    
+    data_bar = data.frame(y = t(ratio), x = methods)
+    
+    colnames(data_bar) = c("y","x")
+    
+    p[[k]] = ggplot(data_bar, aes(x=x, y=y)) +
+      geom_bar(stat="identity", fill="steelblue") +
+      scale_x_discrete(limits=data_bar$x) +
+      xlab("Method") +
+      ylab("KS Statistics") +
+      ggtitle(paste0(j)) +
+      theme_cowplot() +
+      theme(plot.title = element_text(size = 18, hjust = 0.4),
+            axis.text = element_text(size = 12),
+            legend.title=element_blank())
+    
+    k = k + 1
+    
+  }
+  
+  main = grid.arrange(grobs = p,ncol = 9)
+  
+  return(main)
+  
+}
 
 
-
-
-
+plot_gene_distribution <- function(drop_index, seed_value){
+  
+  methods = c("True Data", "Dropout Data", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")
+  
+  group_info = c(1:8)
+  
+  group = rep(1:8, each = 100)
+  
+  data_cor = get_cor_data(drop_index, seed_value)
+  
+  data_cell = data_cor[[1]]
+  
+  data_gene = data_cor[[2]]
+  
+  data = get_data_HF(drop_index, seed_value, k = 4)
+  
+  data_true  = data$data_true
+  
+  data_dropout = data$data_raw
+  
+  index = rowMeans(data_dropout) > 0
+  
+  data_true = data_true[index,]
+  
+  de = get_marker_genes(data_true, group)
+  
+  tmp = unique(de$clusts)
+  
+  tmp = tmp[!is.na(tmp)]
+  
+  tmp = sort(tmp)
+  
+  de_gene = list()
+  
+  for(i in c(1:length(tmp))){
+    
+    de_gene[[i]] = which((de$auroc > 0.85) & (de$clusts == tmp[i]) & (de$pvalue < 0.01))
+    
+    print(paste0("The number of DE genes: ", length(de_gene[[i]])))
+    
+  }
+  
+  
+  N = dim(data_gene[[1]])[1]
+  
+  k = 1
+  
+  p = list()
+  
+  for( j in c(1:8)){
+    
+    index1 = c(1:N) %in% de_gene[[j]]
+    
+    ratio = c()
+    
+    for(i in c(1:7)){
+      
+      tmp = data_gene[[i]]
+      
+      low_index = lower.tri(tmp)*1
+      
+      tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      
+      tmp_index[index1,index1] = 1
+      
+      low_index1 = low_index*tmp_index > 0 
+      
+      tmp_index = matrix(0, nrow = dim(tmp)[1], ncol = dim(tmp)[2])
+      
+      tmp_index[index1,!index1] = 1
+      
+      tmp_index[!index1,index1] = 1
+      
+      low_index2 = low_index*tmp_index > 0
+      
+      data_plot1 = data.frame(x = data_cor_vector(tmp[low_index1]))
+      
+      data_plot1$y = paste0("Marker_",j)
+      
+      data_plot2 = data.frame(x = data_cor_vector(tmp[low_index2]))
+      
+      data_plot2$y = "NonMarker"
+      
+      data_plot = rbind(data_plot1,data_plot2)
+      
+      a = ks.test(data_plot1$x, data_plot2$x)
+      
+      ratio = cbind(ratio, a[[1]])
+      
+      p[[k]] = ggplot(data_plot, aes(x=x, fill=y, color=y)) +
+        geom_density(alpha = .3) +
+        ggtitle(paste0("Gene: ", methods[i])) +
+        theme(legend.position = c(0.2, 0.9)) 
+      
+      k = k + 1
+      
+    }
+    
+    data_bar = data.frame(y = t(ratio), x = methods)
+    
+    colnames(data_bar) = c("y","x")
+    
+    p[[k]] = ggplot(data_bar, aes(x=x, y=y)) +
+      geom_bar(stat="identity", fill="steelblue") +
+      scale_x_discrete(limits=data_bar$x) +
+      xlab("Method") +
+      ylab("KS Statistics") +
+      ggtitle(paste0(j)) +
+      theme_cowplot() +
+      theme(plot.title = element_text(size = 18, hjust = 0.4),
+            axis.text = element_text(size = 12),
+            legend.title=element_blank())
+    
+    k = k + 1
+    
+  }
+  
+  main <- grid.arrange(grobs = p,ncol = 9)
+  
+  ggsave(filename= paste0("Figure_HF_histogram_test_gene_",drop_index,".pdf"), 
+         plot = main, 
+         width = 35, 
+         height = 32)
+  
+}
