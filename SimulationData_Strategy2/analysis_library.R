@@ -409,12 +409,6 @@ calculate_error <- function(dropout_index, rand_seed){
   
   data_scrabble_gene[is.na(data_scrabble_gene)] = 0
   
-  
-  ##################################################
-  
-  
-  ##################################################
-  
   error_gene = matrix(0, nrow = 7, ncol = 1)
   
   error_gene[1] = calculate_similarity(data_true_gene, data_dropout_gene) 
