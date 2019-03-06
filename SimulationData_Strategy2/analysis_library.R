@@ -233,6 +233,32 @@ run_scrabble <- function(dropout_index, rand_seed){
   
 }
 
+
+# run VIPER 
+run_viper <- function(dropout_index, rand_seed){
+  
+  # Parameter in the function
+  # drop_index: the index of dropout_mid to control the dropout rate
+  # seed_value: the random seed
+  
+  # create the folder
+  dir.create(file.path("/imputation_viper_data/"), 
+             stringsAsFactors = FALSE)
+  
+  # load the data
+  data_sc = as.matrix(fread(paste0("/data_all/data_raw_",dropout_index,"_",rand_seed,".csv")))
+  
+  # run the imputation
+  extdata = VIPER(data_sc, num = 5000, percentage.cutoff = 0.1, minbool = FALSE, alpha = 1, 
+                   report = FALSE, outdir = NULL, prefix = NULL)
+  
+  # save the data
+  saveRDS(extdata$imputed, file = paste0("/imputation_viper_data/data_",dropout_index,"_",rand_seed,"_viper_imputation.rds"))
+  
+}
+
+
+
 # get the data, true data, raw data, and the imputed data
 get_data_HF <- function(dropout_index, rand_seed){
   
@@ -266,6 +292,11 @@ get_data_HF <- function(dropout_index, rand_seed){
                                       rand_seed,".csv")))
   data_magic = data_magic[,-1]
   
+  # load the imputed data by VIPER
+  data_viper = readRDS(file = paste0("/imputation_viper_data/data_",
+                                        dropout_index,"_",
+                                        rand_seed,"_viper_imputation.rds"))
+  
   # load the imputed data by SCRABBLE
   data_scrabble = readRDS(file = paste0("/imputation_scrabble_data/data_",
                                         dropout_index,"_",
@@ -284,6 +315,8 @@ get_data_HF <- function(dropout_index, rand_seed){
   data$data_scimpute = as.matrix(data_scimpute)
   
   data$data_magic = as.matrix(data_magic)
+  
+  data$data_viper = as.matrix(data_viper)
   
   data$data_scrabble = as.matrix(data_scrabble)
   
@@ -320,9 +353,11 @@ calculate_error <- function(dropout_index, rand_seed){
   
   data_magic = data$data_magic
   
+  data_viper = data$data_viper
+  
   data_scrabble = data$data_scrabble
   
-  error = matrix(0, nrow = 6, ncol = 1)
+  error = matrix(0, nrow = 7, ncol = 1)
   
   error[1] = norm(data_dropout - data_true, type = "2")
   
@@ -332,9 +367,11 @@ calculate_error <- function(dropout_index, rand_seed){
   
   error[4] = norm(data_magic - data_true, type = "2")
   
-  error[5] = norm(data_scrabble - data_true, type = "2")
+  error[5] = norm(data_viper - data_true, type = "2")
   
-  error[6] = 1 - nnzero(data_dropout)/length(data_dropout)
+  error[6] = norm(data_scrabble - data_true, type = "2")
+  
+  error[7] = 1 - nnzero(data_dropout)/length(data_dropout)
   
   # gene-gene correlation
   # true data
@@ -362,13 +399,23 @@ calculate_error <- function(dropout_index, rand_seed){
   
   data_magic_gene[is.na(data_magic_gene)] = 0
   
+  # VIPER data
+  data_viper_gene = cor(t(data_viper), method = "pearson")
+  
+  data_viper_gene[is.na(data_viper_gene)] = 0
+  
   # SCRABBLE data
   data_scrabble_gene = cor(t(data_scrabble), method = "pearson")
   
   data_scrabble_gene[is.na(data_scrabble_gene)] = 0
   
   
-  error_gene = matrix(0, nrow = 6, ncol = 1)
+  ##################################################
+  
+  
+  ##################################################
+  
+  error_gene = matrix(0, nrow = 7, ncol = 1)
   
   error_gene[1] = calculate_similarity(data_true_gene, data_dropout_gene) 
   
@@ -378,9 +425,11 @@ calculate_error <- function(dropout_index, rand_seed){
   
   error_gene[4] = calculate_similarity(data_true_gene, data_magic_gene)
   
-  error_gene[5] = calculate_similarity(data_true_gene, data_scrabble_gene)
+  error_gene[5] = calculate_similarity(data_true_gene, data_viper_gene)
   
-  error_gene[6] = 1 - nnzero(data_dropout)/length(data_dropout)
+  error_gene[6] = calculate_similarity(data_true_gene, data_scrabble_gene)
+  
+  error_gene[7] = 1 - nnzero(data_dropout)/length(data_dropout)
   
   
   # cell-cell correlation
@@ -410,6 +459,11 @@ calculate_error <- function(dropout_index, rand_seed){
   
   data_magic_cell[is.na(data_magic_cell)] = 0
   
+  # VIPER data
+  data_viper_cell = cor(data_viper, method = "pearson")
+  
+  data_viper_cell[is.na(data_viper_cell)] = 0
+  
   # SCRABBLE
   data_scrabble_cell = cor(data_scrabble, method = "pearson")
   
@@ -425,9 +479,11 @@ calculate_error <- function(dropout_index, rand_seed){
   
   error_cell[4] = calculate_similarity(data_true_cell, data_magic_cell)
   
-  error_cell[5] = calculate_similarity(data_true_cell, data_scrabble_cell)
+  error_cell[5] = calculate_similarity(data_true_cell, data_viper_cell)
   
-  error_cell[6] = 1 - nnzero(data_dropout)/length(data_dropout)
+  error_cell[6] = calculate_similarity(data_true_cell, data_scrabble_cell)
+  
+  error_cell[7] = 1 - nnzero(data_dropout)/length(data_dropout)
   
   # define the error as a list
   result <- list()
@@ -447,52 +503,52 @@ plot_comparison <- function(data, ylables, ylim_value = 100, h_ylim = 10){
   
   # this function is used to plot the boxplot with the p-values
   # Parameter in the function
-  # data : data is a matrix with 6 columns, the first five colums are the errors
+  # data : data is a matrix with 7 columns, the first five colums are the errors
   # the last column is the dropout rates
   # ylabels: the y labels shown on the graph
   # ylim_value : the smallest y value where the pvalue is shown
   # h_ylim: the difference between two pvalues shown in the graph. the best ones
   # is the 10%*ylim_vlaue
   
-  
-  dataV0 = data[c(1:5),]
+  dataV0 = data[c(1:6),]
   
   dataV1 = data.frame(as.vector(t(dataV0)))
   
   # calculate the dropout rate
-  dropout_rate = round(mean(data[6,])*100)
+  dropout_rate = round(mean(data[7,])*100)
   
   N = dim(dataV1)[1]                                                      
   
   # the number of data using for plotting the boxplot
   # dataV1 is built with two columns: y values and group labels
-  dataV1$group = rep(c(1:5), each = N/5)
+  dataV1$group = rep(c(1:6), each = N/6)
   
   colnames(dataV1) = c('y','group')
   
   # define the comparison lists
-  my_comparisons = list( c("1", "5"), c("2", "5"), c("3", "5"), c("4", "5"))
+  my_comparisons = list( c("1", "6"), c("2", "6"), c("3", "6"), c("4", "6"), c("5", "6"))
   
   # compare the errors using t-test
-  pval = compare_means(y ~ group,data = dataV1, method = "t.test", ref.group = "5", paired = TRUE)
+  pval = compare_means(y ~ group,data = dataV1, method = "t.test", ref.group = "6", paired = TRUE)
 
   # plot the boxplot with pvalues for the comparisons
-  pp <- ggboxplot(dataV1, x = "group", y = "y", fill = "group",
-                  palette = c("#00AFBB","#0000CD", "#E7B800", "#FC4E07", "#6ebb00")) +
-    stat_boxplot(geom = "errorbar", width = 0.3, outlier.size = NA, outlier.shape = NA, outlier.colour = NA) +
-    ylim(c(0,ylim_value + 3.5*h_ylim)) + 
+  pp = ggboxplot(dataV1, x = "group", y = "y", fill = "group",
+                  palette = c("#00AFBB","#0000CD", "#E7B800", "#FC4E07",  "#ef8a62", "#6ebb00")) +
+    stat_boxplot(geom = "errorbar", width = 0.3) +
+    ylim(c(0,ylim_value + 4.5*h_ylim)) + 
     theme_bw() +
     geom_signif(comparisons = my_comparisons, 
                 annotations = formatC(pval$p, format = "e", digits = 2),
                 tip_length = 0.01,
-                y_position = c(ylim_value + 3*h_ylim, ylim_value + 2*h_ylim, ylim_value + h_ylim, ylim_value)) +
+                y_position = c(ylim_value + 4*h_ylim, ylim_value + 3*h_ylim, ylim_value + 2*h_ylim, ylim_value + h_ylim, ylim_value)) +
     theme(text=element_text(size=14)) +
     xlab("Method") + 
-    ylab(ylables) + 
+    ylab("Error") + 
     ggtitle(paste0("Dropout Rate: ",dropout_rate,"%")) +
-    scale_fill_discrete(name="Method",
-                        breaks=c("1", "2", "3", "4", "5"),
-                        labels=c("Dropout", "DrImpute", "scImpute", "MAGIC", "SCRABBLE")) +
+    scale_fill_manual( values = c("#00AFBB","#0000CD", "#E7B800", "#FC4E07",  "#ef8a62", "#6ebb00"),
+                       name="Method",
+                       breaks=c("1", "2", "3", "4", "5", "6"),
+                       labels=c("Dropout", "DrImpute", "scImpute", "MAGIC", "VIPER", "SCRABBLE")) +
     theme(panel.grid.major = element_blank(), 
           panel.grid.minor = element_blank(),
           panel.background = element_blank())
@@ -544,7 +600,12 @@ calculate_tsne <- function(dropout_index, rand_seed){
                          perplexity = perplexity_value)
   
   # calculate tsne of the imputed data using SCRABBLE
-  data_tsne[[6]] = Rtsne(t(data$data_scrabble), 
+  data_tsne[[6]] = Rtsne(t(data$data_viper), 
+                         initial_dims = initial_dims_value, 
+                         perplexity = perplexity_value)
+  
+  # calculate tsne of the imputed data using SCRABBLE
+  data_tsne[[7]] = Rtsne(t(data$data_scrabble), 
                          initial_dims = initial_dims_value, 
                          perplexity = perplexity_value)
   
@@ -593,10 +654,10 @@ plot_tsne_HF <- function(dropout_index, rand_seed){
   p = list()
   
   # define the names of the methods
-  methods = c("True Data","Raw Data","DrImpute","scImpute","MAGIC","SCRABBLE")
+  methods = c("True Data","Raw Data","DrImpute","scImpute","MAGIC","VIPER","SCRABBLE")
   
   # plot the tsne figures
-  for(i in c(1:6)){
+  for(i in c(1:length(methods))){
     
     tmp = data_tsne[[i]]
     
@@ -611,7 +672,7 @@ plot_tsne_HF <- function(dropout_index, rand_seed){
   }
   
   # gather the figures
-  p1 = grid.arrange(grobs = p,ncol = 6)
+  p1 = grid.arrange(grobs = p,ncol = length(methods))
   
   # return the figure handle
   return(p1)
@@ -647,10 +708,13 @@ plot_ma_HF <- function(dropout_index, rand_seed){
   pl[[4]] = prepare_ma_data_plot(data$data_true, data$data_magic, "MAGIC") 
   
   # plot MA of the imputed data of SCRABBLE
-  pl[[5]] = prepare_ma_data_plot(data$data_true, data$data_scrabble, "SCRABBLE")
+  pl[[5]] = prepare_ma_data_plot(data$data_true, data$data_viper, "SCRABBLE")
+  
+  # plot MA of the imputed data of SCRABBLE
+  pl[[6]] = prepare_ma_data_plot(data$data_true, data$data_scrabble, "SCRABBLE")
   
   # assemble of figues
-  main = grid.arrange(grobs = pl,ncol = 5)
+  main = grid.arrange(grobs = pl,ncol = 6)
   
   # return the handle of the figure
   return(main)
@@ -857,12 +921,16 @@ plot_meansd <- function(dropout_index, rand_seed){
   p = meanSdPlot(data$data_magic, ranks = FALSE)
   pl[[5]] = p$gg + ggtitle("MAGIC")
   
+  # plot the mean-variance of the imputed data of VIPER
+  p = meanSdPlot(data$data_viper, ranks = FALSE)
+  pl[[6]] = p$gg + ggtitle("VIPER")
+  
   # plot the mean-variance of the imputed data of SCRABBLE
   p = meanSdPlot(data$data_scrabble, ranks = FALSE)
-  pl[[6]] = p$gg + ggtitle("SCRABBLE")
+  pl[[7]] = p$gg + ggtitle("SCRABBLE")
   
   # Assemble the figures
-  main = grid.arrange(grobs = pl,ncol = 6)
+  main = grid.arrange(grobs = pl,ncol = 7)
   
   # return the handler of figure
   return(main)
@@ -941,10 +1009,13 @@ plot_data <- function(dropout_index, rand_seed){
   pl[[5]] = plot_data_p(data$data_magic, "MAGIC") 
   
   # plot the imputed data of SCRABBLE
-  pl[[6]] = plot_data_p(data$data_scrabble, "SCRABBLE")
+  pl[[6]] = plot_data_p(data$data_viper, "VIPER")
+  
+  # plot the imputed data of SCRABBLE
+  pl[[7]] = plot_data_p(data$data_scrabble, "SCRABBLE")
   
   # Assemble the figures
-  main = grid.arrange(grobs = pl,ncol = 6)
+  main = grid.arrange(grobs = pl,ncol = 7)
   
   # return the handler of figure
   return(main)
@@ -1023,6 +1094,8 @@ plot_cor_HF <- function(dropout_index, rand_seed){
   
   data_magic = data$data_magic
   
+  data_viper = data$data_viper
+  
   data_scrabble = data$data_scrabble
   
   # gene-gene correlation
@@ -1051,28 +1124,36 @@ plot_cor_HF <- function(dropout_index, rand_seed){
   
   data_magic_gene[is.na(data_magic_gene)] = 0
   
+  # VIPER data
+  data_viper_gene = cor(t(data_viper), method = "pearson")
+  
+  data_viper_gene[is.na(data_viper_gene)] = 0
+  
   # SCRABBLE data
   data_scrabble_gene = cor(t(data_scrabble), method = "pearson")
   
   data_scrabble_gene[is.na(data_scrabble_gene)] = 0
   
-  p <- list()
   
-  pl <- list()
+  p = list()
   
-  pl[[1]] <- plot_cor_p(data_true_gene,"Gene: True Data")
+  pl = list()
   
-  pl[[2]] <- plot_cor_p(data_dropout_gene,"Gene: Dropout Data")
+  pl[[1]] = plot_cor_p(data_true_gene,"Gene: True Data")
   
-  pl[[3]] <- plot_cor_p(data_drimpute_gene,"Gene: DrImpute Data")
+  pl[[2]] = plot_cor_p(data_dropout_gene,"Gene: Dropout Data")
   
-  pl[[4]] <- plot_cor_p(data_scimpute_gene,"Gene: scImpute Data")
+  pl[[3]] = plot_cor_p(data_drimpute_gene,"Gene: DrImpute Data")
   
-  pl[[5]] <- plot_cor_p(data_magic_gene,"Gene: MAGIC Data")
+  pl[[4]] = plot_cor_p(data_scimpute_gene,"Gene: scImpute Data")
   
-  pl[[6]] <- plot_cor_p(data_scrabble_gene,"Gene: SCRABBLE Data")
+  pl[[5]] = plot_cor_p(data_magic_gene,"Gene: MAGIC Data")
   
-  p[[1]] <- grid.arrange(grobs = pl,ncol = 6)
+  pl[[6]] = plot_cor_p(data_viper_gene,"Gene: VIPER Data")
+  
+  pl[[7]] = plot_cor_p(data_scrabble_gene,"Gene: SCRABBLE Data")
+  
+  p[[1]] = grid.arrange(grobs = pl,ncol = 7)
   
   # cell-cell correlation
   # true data
@@ -1100,26 +1181,33 @@ plot_cor_HF <- function(dropout_index, rand_seed){
   
   data_magic_cell[is.na(data_magic_cell)] = 0
   
+  # VIPER
+  data_viper_cell = cor(data_viper, method = "pearson")
+  
+  data_viper_cell[is.na(data_viper_cell)] = 0
+  
   # SCRABBLE
   data_scrabble_cell = cor(data_scrabble, method = "pearson")
   
   data_scrabble_cell[is.na(data_scrabble_cell)] = 0
   
-  pl <- list()
+  pl = list()
   
-  pl[[1]] <- plot_cor_p(data_true_cell,"Cell: True Data")
+  pl[[1]] = plot_cor_p(data_true_cell,"Cell: True Data")
   
-  pl[[2]] <- plot_cor_p(data_dropout_cell,"Cell: Dropout Data")
+  pl[[2]] = plot_cor_p(data_dropout_cell,"Cell: Dropout Data")
   
-  pl[[3]] <- plot_cor_p(data_drimpute_cell,"Cell: DrImpute Data")
+  pl[[3]] = plot_cor_p(data_drimpute_cell,"Cell: DrImpute Data")
   
-  pl[[4]] <- plot_cor_p(data_scimpute_cell,"Cell: scImpute Data")
+  pl[[4]] = plot_cor_p(data_scimpute_cell,"Cell: scImpute Data")
   
-  pl[[5]] <- plot_cor_p(data_magic_cell,"Cell: MAGIC Data")
+  pl[[5]] = plot_cor_p(data_magic_cell,"Cell: MAGIC Data")
   
-  pl[[6]] <- plot_cor_p(data_scrabble_cell,"Cell: SCRABBLE Data")
+  pl[[6]] = plot_cor_p(data_viper_cell,"Cell: VIPER Data")
   
-  p[[2]] <- grid.arrange(grobs = pl,ncol = 6)
+  pl[[7]] = plot_cor_p(data_scrabble_cell,"Cell: SCRABBLE Data")
+  
+  p[[2]] = grid.arrange(grobs = pl,ncol = 6)
   
   return(p)
   
